@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { useAntiCheat } from '../hooks/useAntiCheat';
 import { API_ENDPOINTS } from '../utils/api';
+import SafeStorage from '../utils/safeStorage';
 
 const ExamPage = () => {
   const { student, logout } = useAuth();
@@ -23,6 +24,75 @@ const ExamPage = () => {
   }, [navigate]);
 
   const { requestFullscreen } = useAntiCheat(handleDisqualified, examStarted);
+
+  // Define submit handlers before they're used in effects
+  const handleSubmit = useCallback(async (isAuto = false) => {
+    console.log('handleSubmit called, isAuto:', isAuto);
+    console.log('Current answers:', answers);
+    console.log('examData:', examData);
+    
+    // Check if examData is loaded
+    if (!examData || !examData.questions) {
+      console.error('Cannot submit: examData not loaded');
+      alert('Exam data not loaded. Please refresh and try again.');
+      return;
+    }
+    
+    if (!isAuto) {
+      const confirm = window.confirm(
+        'Are you sure you want to submit your exam? You cannot change your answers after submission.'
+      );
+      if (!confirm) {
+        console.log('User cancelled submission');
+        return;
+      }
+    }
+
+    setSubmitting(true);
+
+    try {
+      const token = localStorage.getItem('student_access_token');
+      
+      // Prepare answers in the required format
+      const answersList = examData.questions.map(q => ({
+        question_id: q.id,
+        selected_option: answers[q.id] || null,
+        marked_for_review: markedForReview[q.id] || false
+      }));
+
+      console.log('Submitting answers:', answersList);
+
+      const response = await axios.post(
+        API_ENDPOINTS.submitExam,
+        { answers: answersList },
+        { params: { token } }
+      );
+
+      console.log('Submit response:', response.data);
+
+      // Clear SafeStorage
+      SafeStorage.removeItem('exam_answers');
+
+      // Navigate to results
+      navigate('/result', { 
+        state: { 
+          score: response.data.score,
+          total_marks: response.data.total_marks,
+          percentage: response.data.percentage,
+          submitted_at: response.data.submitted_at
+        } 
+      });
+    } catch (error) {
+      console.error('Error submitting exam:', error);
+      console.error('Error details:', error.response?.data);
+      alert('Error submitting exam. Please try again.');
+      setSubmitting(false);
+    }
+  }, [examData, answers, markedForReview, navigate]);
+
+  const handleAutoSubmit = useCallback(() => {
+    handleSubmit(true);
+  }, [handleSubmit]);
 
   // Load exam data
   useEffect(() => {
@@ -60,7 +130,7 @@ const ExamPage = () => {
           // Exam has been manually ended
           console.log('Exam manually ended, setting time to 0');
           remaining = 0;
-        } else if (response.data.expected_end) {
+        } else if (response.data.expected_end && response.data.exam_started_at) {
           // Use calculated end time (student.exam_started_at + duration)
           const endTime = new Date(response.data.expected_end);
           const now = new Date();
@@ -73,26 +143,24 @@ const ExamPage = () => {
             remainingMinutes: Math.floor(remaining / 60)
           }); // Debug log
           
-          // Safety check: if time is negative or 0, something is wrong
-          if (remaining <= 0) {
-            console.error('ERROR: Calculated time remaining is 0 or negative!');
-            console.error('This means exam_started_at or expected_end is incorrect');
-            console.error('Using fallback duration instead');
-            remaining = response.data.duration_minutes * 60;
+          // Safety check: if time is negative, exam time has expired
+          if (remaining < 0) {
+            console.error('ERROR: Exam time has already expired!');
+            remaining = 0;
           }
         } else {
-          // Fallback: use duration if no expected_end (shouldn't happen)
-          console.warn('No expected_end found, using duration fallback');
-          remaining = response.data.duration_minutes * 60;
+          // Critical error: cannot calculate time properly
+          console.error('CRITICAL: Cannot calculate exam time - missing expected_end or exam_started_at');
+          throw new Error('Unable to determine exam duration. Please contact support.');
         }
         
         setTimeRemaining(remaining > 0 ? remaining : 0);
         console.log('Time remaining set to:', remaining > 0 ? remaining : 0, 'seconds =', Math.floor((remaining > 0 ? remaining : 0) / 60), 'minutes'); // Debug log
         
-        // Load saved answers from localStorage
-        const savedAnswers = localStorage.getItem('exam_answers');
+        // Load saved answers using SafeStorage
+        const savedAnswers = SafeStorage.getItem('exam_answers');
         if (savedAnswers) {
-          setAnswers(JSON.parse(savedAnswers));
+          setAnswers(savedAnswers);
         }
         
         setExamStarted(true);
@@ -144,12 +212,12 @@ const ExamPage = () => {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [examStarted]); // Remove timeRemaining from dependencies to prevent interval recreation
+  }, [examStarted, examData, handleAutoSubmit]);
 
-  // Auto-save answers to localStorage
+  // Auto-save answers using SafeStorage
   useEffect(() => {
     if (Object.keys(answers).length > 0) {
-      localStorage.setItem('exam_answers', JSON.stringify(answers));
+      SafeStorage.setItem('exam_answers', answers);
     }
   }, [answers]);
 
@@ -170,66 +238,6 @@ const ExamPage = () => {
       ...prev,
       [questionId]: !prev[questionId]
     }));
-  };
-
-  const handleAutoSubmit = async () => {
-    await handleSubmit(true);
-  };
-
-  const handleSubmit = async (isAuto = false) => {
-    console.log('handleSubmit called, isAuto:', isAuto);
-    console.log('Current answers:', answers);
-    
-    if (!isAuto) {
-      const confirm = window.confirm(
-        'Are you sure you want to submit your exam? You cannot change your answers after submission.'
-      );
-      if (!confirm) {
-        console.log('User cancelled submission');
-        return;
-      }
-    }
-
-    setSubmitting(true);
-
-    try {
-      const token = localStorage.getItem('student_access_token');
-      
-      // Prepare answers in the required format
-      const answersList = examData.questions.map(q => ({
-        question_id: q.id,
-        selected_option: answers[q.id] || null,
-        marked_for_review: markedForReview[q.id] || false
-      }));
-
-      console.log('Submitting answers:', answersList);
-
-      const response = await axios.post(
-        API_ENDPOINTS.submitExam,
-        { answers: answersList },
-        { params: { token } }
-      );
-
-      console.log('Submit response:', response.data);
-
-      // Clear localStorage
-      localStorage.removeItem('exam_answers');
-
-      // Navigate to results
-      navigate('/result', { 
-        state: { 
-          score: response.data.score,
-          total_marks: response.data.total_marks,
-          percentage: response.data.percentage,
-          submitted_at: response.data.submitted_at
-        } 
-      });
-    } catch (error) {
-      console.error('Error submitting exam:', error);
-      console.error('Error details:', error.response?.data);
-      alert('Error submitting exam. Please try again.');
-      setSubmitting(false);
-    }
   };
 
   const formatTime = (seconds) => {

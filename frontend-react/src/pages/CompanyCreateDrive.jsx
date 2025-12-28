@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../lib/api';
+import { convertLocalToUTC, convertUTCToLocal, getTimezoneAbbr } from '../utils/timezone';
 
 export default function CompanyCreateDrive() {
   const navigate = useNavigate();
@@ -68,12 +69,8 @@ export default function CompanyCreateDrive() {
         description: drive.description || '',
         category: drive.category || '',
         exam_duration_minutes: drive.exam_duration_minutes || '',
-        window_start: drive.window_start
-          ? drive.window_start.slice(0, 16)
-          : '',
-        window_end: drive.window_end
-          ? drive.window_end.slice(0, 16)
-          : '',
+        window_start: convertUTCToLocal(drive.window_start),
+        window_end: convertUTCToLocal(drive.window_end),
       });
 
       if (drive.targets && drive.targets.length > 0) {
@@ -133,6 +130,8 @@ export default function CompanyCreateDrive() {
       const payload = {
         ...formData,
         exam_duration_minutes: parseInt(formData.exam_duration_minutes) || 0,
+        window_start: convertLocalToUTC(formData.window_start),
+        window_end: convertLocalToUTC(formData.window_end),
         targets: targets.map((t) => ({
           college_id: t.college_id ? parseInt(t.college_id) : null,
           custom_college_name: t.custom_college_name || null,
@@ -366,7 +365,7 @@ export default function CompanyCreateDrive() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                           <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Window Start *
+                            Window Start * <span className="text-xs font-normal text-gray-500">({getTimezoneAbbr()})</span>
                           </label>
                           <input
                             type="datetime-local"
@@ -376,11 +375,12 @@ export default function CompanyCreateDrive() {
                             className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                             required
                           />
+                          <p className="text-xs text-gray-500 mt-1">Your local time</p>
                         </div>
 
                         <div>
                           <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Window End *
+                            Window End * <span className="text-xs font-normal text-gray-500">({getTimezoneAbbr()})</span>
                           </label>
                           <input
                             type="datetime-local"
@@ -390,6 +390,7 @@ export default function CompanyCreateDrive() {
                             className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                             required
                           />
+                          <p className="text-xs text-gray-500 mt-1">Your local time</p>
                         </div>
                       </div>
 

@@ -42,15 +42,26 @@ const CompanyDashboard = () => {
     loadDashboardData();
     loadDrives();
     loadExamStatuses();
+  }, []); // Only run on mount
+  
+  // Polling for active drives
+  useEffect(() => {
+    // Only poll if there are any active drives
+    const hasActiveDrives = drives.some(d => 
+      ['live', 'ongoing', 'upcoming', 'approved'].includes(d.status)
+    );
     
-    // Refresh drives and exam statuses every 15 seconds to check for updates
+    if (!hasActiveDrives) {
+      return; // Don't set up polling if no active drives
+    }
+    
+    // Refresh exam statuses every 30 seconds for active drives
     const interval = setInterval(() => {
-      loadDrives();
       loadExamStatuses();
-    }, 15000);
+    }, 30000);
     
     return () => clearInterval(interval);
-  }, []);
+  }, [drives]); // Re-evaluate when drives change
 
   const loadDashboardData = async () => {
     try {
@@ -149,17 +160,23 @@ const CompanyDashboard = () => {
       const response = await api.get('/company/drives');
       const drivesData = response.data;
       
-      // Load exam status for approved drives
-      const statusPromises = drivesData
-        .filter(d => d.is_approved)
-        .map(async (drive) => {
-          try {
-            const statusRes = await api.get(`/company/drives/${drive.id}/exam-status`);
-            return { driveId: drive.id, status: statusRes.data };
-          } catch (error) {
-            return { driveId: drive.id, status: null };
-          }
-        });
+      // Load exam status for all approved drives (including completed to show final state)
+      const activeDrives = drivesData.filter(d => 
+        d.is_approved && !['rejected', 'suspended'].includes(d.status)
+      );
+      
+      if (activeDrives.length === 0) {
+        return; // Skip if no active drives
+      }
+      
+      const statusPromises = activeDrives.map(async (drive) => {
+        try {
+          const statusRes = await api.get(`/company/drives/${drive.id}/exam-status`);
+          return { driveId: drive.id, status: statusRes.data };
+        } catch (error) {
+          return { driveId: drive.id, status: null };
+        }
+      });
       
       const statuses = await Promise.all(statusPromises);
       const statusMap = {};

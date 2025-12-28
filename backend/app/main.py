@@ -117,7 +117,7 @@ async def health_check():
             "version": "1.0.0",
             "environment": settings.environment,
             "database": "connected",
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.utcnow().isoformat()
         }
     except Exception as e:
         logger.error(f"Health check failed: {str(e)}")
@@ -129,7 +129,7 @@ async def health_check():
                 "version": "1.0.0",
                 "environment": settings.environment,
                 "database": "disconnected",
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.utcnow().isoformat(),
                 "error": str(e) if settings.debug else "Database unavailable"
             }
         )
