@@ -15,6 +15,7 @@ import Landing from './components/Landing';
 import Footer from './components/Footer';
 import { AuthProvider } from './contexts/AuthContext';
 import RequireAuth from './components/RequireAuth';
+import ErrorBoundary from './components/ErrorBoundary';
 
 const Home = () => (
   <main className="max-w-4xl mx-auto p-6">
@@ -61,17 +62,18 @@ const App = () => {
   }
 
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <div className="relative z-0 bg-primary min-h-screen flex flex-col">
-          <RouteBasedHeader />
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AuthProvider>
+          <div className="relative z-0 bg-primary min-h-screen flex flex-col">
+            <RouteBasedHeader />
 
-          <main className="grow">
-            <Routes>
-              <Route path="/" element={<Landing />} />
-              <Route path="/admin/login" element={<AdminLogin />} />
-              <Route path="/company/login" element={<CompanyLogin />} />
-              <Route path="/company/register" element={<CompanyRegister />} />
+            <main className="grow">
+              <Routes>
+                <Route path="/" element={<Landing />} />
+                <Route path="/admin/login" element={<AdminLogin />} />
+                <Route path="/company/login" element={<CompanyLogin />} />
+                <Route path="/company/register" element={<CompanyRegister />} />
 
               <Route
                 path="/admin"
@@ -156,6 +158,7 @@ const App = () => {
         />
       </AuthProvider>
     </BrowserRouter>
+  </ErrorBoundary>
   );
 };
 

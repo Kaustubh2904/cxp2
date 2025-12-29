@@ -11,6 +11,7 @@ export const API_ENDPOINTS = {
   recordViolation: `${API_BASE_URL}/api/student/exam/violation`,
   submitExam: `${API_BASE_URL}/api/student/exam/submit`,
   getResult: `${API_BASE_URL}/api/student/exam/result`,
+  driveInfo: `${API_BASE_URL}/api/student/drive-info`,
 };
 
 export default API_BASE_URL;

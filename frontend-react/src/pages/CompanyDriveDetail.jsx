@@ -427,7 +427,7 @@ export default function CompanyDriveDetail() {
                         Type
                       </p>
                       <p className="text-gray-900 font-medium">
-                        {drive.question_type}
+                        {drive.category}
                       </p>
                     </div>
                     <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-200/50">
@@ -435,7 +435,7 @@ export default function CompanyDriveDetail() {
                         Duration
                       </p>
                       <p className="text-gray-900 font-medium">
-                        {drive.duration_minutes} minutes
+                        {drive.exam_duration_minutes} minutes
                       </p>
                     </div>
                     <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-200/50">
@@ -447,17 +447,17 @@ export default function CompanyDriveDetail() {
                   </div>
 
                   {/* Scheduled Start Time */}
-                  {drive.scheduled_start && (
+                  {drive.window_start && (
                     <div className="mb-6 bg-blue-50 border border-blue-200 rounded-xl p-6">
                       <p className="text-sm font-semibold text-blue-900 mb-2">
-                        📅 Scheduled Start Time
+                        📅 Scheduled Window Start
                       </p>
                       <p className="text-blue-800 font-medium">
-                        {new Date(drive.scheduled_start).toLocaleString()}
+                        {new Date(drive.window_start).toLocaleString()}
                       </p>
-                      {examStatus && !examStatus.scheduled_has_passed && !drive.actual_start && (
+                      {examStatus && !examStatus.scheduled_has_passed && !drive.actual_window_start && (
                         <p className="text-blue-700 text-sm mt-2">
-                          ⏰ Exam will start automatically at this time, or you can start it manually.
+                          ⏰ Exam window will open at this time, or you can start it manually.
                         </p>
                       )}
                     </div>
@@ -491,14 +491,14 @@ export default function CompanyDriveDetail() {
                             <span>Exam is Currently Ongoing</span>
                           </p>
                           <div className="space-y-2 text-sm text-green-700 mb-4">
-                            {drive.actual_start && (
+                            {drive.actual_window_start && (
                               <p>
-                                <strong>Started at:</strong>{' '}
-                                {new Date(drive.actual_start).toLocaleString()}
+                                <strong>Window Started at:</strong>{' '}
+                                {new Date(drive.actual_window_start).toLocaleString()}
                               </p>
                             )}
                             <p>
-                              <strong>Duration:</strong> {drive.duration_minutes} minutes
+                              <strong>Duration:</strong> {drive.exam_duration_minutes} minutes
                             </p>
                             {examStatus.time_remaining_minutes !== null && (
                               <p className="text-lg font-bold text-green-900">
@@ -530,16 +530,16 @@ export default function CompanyDriveDetail() {
                             <span>Exam Has Ended</span>
                           </p>
                           <div className="space-y-2 text-sm text-gray-700">
-                            {drive.actual_start && (
+                            {drive.actual_window_start && (
                               <p>
                                 <strong>Started at:</strong>{' '}
-                                {new Date(drive.actual_start).toLocaleString()}
+                                {new Date(drive.actual_window_start).toLocaleString()}
                               </p>
                             )}
-                            {drive.actual_end && (
+                            {drive.actual_window_end && (
                               <p>
                                 <strong>Ended at:</strong>{' '}
-                                {new Date(drive.actual_end).toLocaleString()}
+                                {new Date(drive.actual_window_end).toLocaleString()}
                               </p>
                             )}
                           </div>
@@ -591,10 +591,10 @@ export default function CompanyDriveDetail() {
                                 <span>🟢</span> Exam is Currently Ongoing
                               </p>
                               <p className="text-green-700 text-sm mb-1">
-                                Started at: {new Date(examStatus.actual_start).toLocaleString()}
+                                Started at: {new Date(examStatus.actual_window_start).toLocaleString()}
                               </p>
                               <p className="text-green-700 text-sm mb-1">
-                                Duration: {examStatus.duration_minutes} minutes
+                                Duration: {examStatus.exam_duration_minutes} minutes
                               </p>
                               {examStatus.time_remaining_minutes !== null && (
                                 <p className="text-green-700 text-sm font-semibold">
@@ -626,14 +626,14 @@ export default function CompanyDriveDetail() {
                           <p className="text-gray-800 font-bold flex items-center gap-2 text-lg mb-2">
                             <span>🏁</span> Exam Has Ended
                           </p>
-                          {examStatus.actual_start && (
+                          {examStatus.actual_window_start && (
                             <p className="text-gray-700 text-sm mb-1">
-                              Started at: {new Date(examStatus.actual_start).toLocaleString()}
+                              Started at: {new Date(examStatus.actual_window_start).toLocaleString()}
                             </p>
                           )}
-                          {examStatus.actual_end && (
+                          {examStatus.actual_window_end && (
                             <p className="text-gray-700 text-sm">
-                              Ended at: {new Date(examStatus.actual_end).toLocaleString()}
+                              Ended at: {new Date(examStatus.actual_window_end).toLocaleString()}
                             </p>
                           )}
                         </div>

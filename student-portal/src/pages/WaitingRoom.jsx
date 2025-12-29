@@ -46,16 +46,27 @@ const WaitingRoom = () => {
       
       // Fetch drive details to get window information
       try {
-        const driveResponse = await axios.get(`${API_ENDPOINTS.base}/student/drive-info`, {
-          headers: { Authorization: `Bearer ${token}` }
+        const driveResponse = await axios.get(API_ENDPOINTS.driveInfo, {
+          params: { token }
         });
         setDriveDetails(driveResponse.data);
         
         // Calculate window time remaining
-        if (driveResponse.data.actual_window_end || driveResponse.data.window_end) {
-          const windowEnd = new Date(driveResponse.data.actual_window_end || driveResponse.data.window_end);
+        // Priority: actual_window_end (set when started or manually ended) > window_end (scheduled)
+        const windowEndTime = driveResponse.data.actual_window_end || driveResponse.data.window_end;
+        
+        if (windowEndTime) {
+          const windowEnd = new Date(windowEndTime);
           const now = new Date();
           const diffMs = windowEnd - now;
+          
+          console.log('Window end calculation:', {
+            actual_window_end: driveResponse.data.actual_window_end,
+            window_end: driveResponse.data.window_end,
+            using: windowEndTime,
+            diffMs,
+            diffMinutes: Math.floor(diffMs / 60000)
+          });
           
           if (diffMs > 0) {
             const hours = Math.floor(diffMs / 3600000);

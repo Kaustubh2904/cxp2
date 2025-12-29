@@ -90,12 +90,34 @@ export const useAntiCheat = (onDisqualified, isExamActive) => {
   useEffect(() => {
     if (!isExamActive) return;
 
+    let fullscreenExitTimeout = null;
+
     const handleFullscreenChange = () => {
       if (!document.fullscreenElement) {
         console.log('Fullscreen exit detected!');
         recordViolation('fullscreen_exit');
-        // DON'T try to re-enter fullscreen - just record the violation
-        // This was causing a loop where any click would trigger fullscreen
+        
+        // Give user 3 seconds to return to fullscreen before showing prompt
+        fullscreenExitTimeout = setTimeout(() => {
+          const reEnter = window.confirm(
+            '⚠️ You have exited fullscreen mode.\n\n' +
+            'This is a violation. Click OK to return to fullscreen mode.'
+          );
+          if (reEnter) {
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) {
+              elem.requestFullscreen().catch(err => {
+                console.log('Failed to re-enter fullscreen:', err);
+              });
+            }
+          }
+        }, 3000);
+      } else {
+        // User returned to fullscreen, cancel the prompt
+        if (fullscreenExitTimeout) {
+          clearTimeout(fullscreenExitTimeout);
+          fullscreenExitTimeout = null;
+        }
       }
     };
 
@@ -103,6 +125,9 @@ export const useAntiCheat = (onDisqualified, isExamActive) => {
 
     return () => {
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      if (fullscreenExitTimeout) {
+        clearTimeout(fullscreenExitTimeout);
+      }
     };
   }, [recordViolation, isExamActive]);
 

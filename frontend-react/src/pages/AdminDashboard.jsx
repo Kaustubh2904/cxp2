@@ -85,15 +85,31 @@ export default function AdminDashboard() {
     if (activeTab === 'drives') {
       loadAllDrives();
       loadExamStatuses();
-      
-      // Refresh exam statuses every 15 seconds to check for auto-start/end
-      const interval = setInterval(() => {
-        loadExamStatuses();
-      }, 15000);
-      
-      return () => clearInterval(interval);
     }
   }, [driveStatusFilter, activeTab]);
+  
+  // Polling for active drives in drives tab
+  useEffect(() => {
+    if (activeTab !== 'drives') {
+      return; // Only poll when on drives tab
+    }
+    
+    // Check if there are any active drives before setting up polling
+    const hasActiveDrives = allDrivesList.some(d => 
+      ['live', 'ongoing', 'upcoming', 'approved', 'submitted'].includes(d.status)
+    );
+    
+    if (!hasActiveDrives) {
+      return; // Don't set up polling if no active drives
+    }
+    
+    // Refresh exam statuses every 30 seconds for active drives
+    const interval = setInterval(() => {
+      loadExamStatuses();
+    }, 30000);
+    
+    return () => clearInterval(interval);
+  }, [allDrivesList, activeTab]); // Re-evaluate when drives or tab changes
 
 
 
@@ -204,13 +220,19 @@ export default function AdminDashboard() {
       );
       const drivesData = res.data || [];
       
-      // Load exam status for approved drives
-      const statusPromises = drivesData
-        .filter(d => d.is_approved)
-        .map(async (drive) => {
-          try {
-            const statusRes = await api.get(`/admin/drives/${drive.id}/exam-status`);
-            return { driveId: drive.id, status: statusRes.data };
+      // Only load exam status for active approved drives
+      const activeDrives = drivesData.filter(d => 
+        d.is_approved && !['completed', 'rejected', 'suspended'].includes(d.status)
+      );
+      
+      if (activeDrives.length === 0) {
+        return; // Skip if no active drives
+      }
+      
+      const statusPromises = activeDrives.map(async (drive) => {
+        try {
+          const statusRes = await api.get(`/admin/drives/${drive.id}/exam-status`);
+          return { driveId: drive.id, status: statusRes.data };
           } catch (error) {
             return { driveId: drive.id, status: null };
           }

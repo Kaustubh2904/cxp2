@@ -133,12 +133,6 @@ def format_drive_response(drive: Drive, db: Session):
         "actual_window_start": drive.actual_window_start,
         "actual_window_end": drive.actual_window_end,
         "exam_duration_minutes": drive.exam_duration_minutes,
-        # Legacy fields (kept in DB but not used)
-        "question_type": None,
-        "duration_minutes": None,
-        "scheduled_start": None,
-        "actual_start": None,
-        "actual_end": None,
         "status": drive.status,
         "is_approved": drive.is_approved,
         "admin_notes": drive.admin_notes,
@@ -1171,16 +1165,20 @@ def start_exam(
     if not drive.window_start or not drive.window_end:
         raise HTTPException(status_code=400, detail="Drive must have window_start and window_end times set")
     
-    # Calculate window duration
-    window_duration = drive.window_end - drive.window_start
-    
     # Set actual_window_start to now
     now = datetime.utcnow()
     drive.actual_window_start = now
     
-    # Calculate actual_window_end based on when we're starting
-    # If starting early/late, maintain the same window duration
-    drive.actual_window_end = now + window_duration
+    # Calculate adjusted window end time
+    # If starting before scheduled window_start, extend the window by the early start amount
+    # If starting after window_start, keep the original window_end
+    window_duration = drive.window_end - drive.window_start
+    if now < drive.window_start:
+        # Started early - adjust end time to maintain full window duration
+        drive.actual_window_end = now + window_duration
+    else:
+        # Started on time or late - keep original end time
+        drive.actual_window_end = drive.window_end
     
     db.commit()
     db.refresh(drive)
@@ -1214,10 +1212,11 @@ def end_exam(
     if not drive.actual_window_start:
         raise HTTPException(status_code=400, detail="Cannot end exam window that hasn't been started")
 
+    # Check if already manually ended (actual_window_end exists and is in the past)
     if drive.actual_window_end and drive.actual_window_end < datetime.utcnow():
         raise HTTPException(status_code=400, detail="Exam window has already ended")
 
-    # Set the actual window end time immediately
+    # Set the actual window end time immediately (override any calculated end time)
     now = datetime.utcnow()
     drive.actual_window_end = now
     drive.status = "completed"
@@ -1288,8 +1287,14 @@ def get_exam_status(
     if not drive.actual_window_start:
         exam_state = "not_started"
     elif drive.actual_window_end:
-        exam_state = "ended"
-    elif drive.actual_window_start and not drive.actual_window_end:
+        # If actual_window_end exists, check if it's in the past or very close to now (within 1 second)
+        time_diff = (now - drive.actual_window_end).total_seconds()
+        if time_diff >= -1:  # If ended in the past or within 1 second from now
+            exam_state = "ended"
+        else:
+            # End time is in the future
+            exam_state = "ongoing"
+    elif drive.actual_window_start:
         exam_state = "ongoing"
     else:
         exam_state = "not_started"
