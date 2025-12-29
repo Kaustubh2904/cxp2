@@ -19,10 +19,10 @@ export default function CompanyDriveDetail() {
   const [isUploading, setIsUploading] = useState(false);
   const [isEndingExam, setIsEndingExam] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  
+
   // Tab state
   const [activeTab, setActiveTab] = useState('overview');
-  
+
   // Results state
   const [results, setResults] = useState([]);
   const [minPercentage, setMinPercentage] = useState(0);
@@ -34,12 +34,12 @@ export default function CompanyDriveDetail() {
       return;
     }
     loadDriveData();
-    
+
     // Poll exam status every 30 seconds to check for auto-end
     const intervalId = setInterval(() => {
       loadExamStatus();
     }, 30000);
-    
+
     return () => clearInterval(intervalId);
   }, [driveId]);
 
@@ -77,7 +77,7 @@ export default function CompanyDriveDetail() {
     try {
       const res = await api.get(`/company/drives/${driveId}/exam-status`);
       setExamStatus(res.data);
-      
+
       // If exam auto-ended, reload drive data to update status
       if (res.data.should_auto_end) {
         toast.info('Exam has automatically ended after duration elapsed');
@@ -172,7 +172,7 @@ export default function CompanyDriveDetail() {
         params: { format },
         responseType: 'blob'
       });
-      
+
       // Create download link
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
@@ -182,7 +182,7 @@ export default function CompanyDriveDetail() {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-      
+
       toast.success(`${format.charAt(0).toUpperCase() + format.slice(1)} results exported successfully`);
     } catch (err) {
       toast.error(err?.response?.data?.detail || 'Failed to export results');
@@ -351,7 +351,7 @@ export default function CompanyDriveDetail() {
         <div className="flex-1 overflow-auto">
           <main className="py-8">
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-              
+
               {/* Tab Navigation */}
               <div className="bg-white rounded-xl shadow-lg border border-gray-200/50 overflow-hidden">
                 <div className="flex border-b border-gray-200">
@@ -569,7 +569,7 @@ export default function CompanyDriveDetail() {
                       {examStatus.exam_state === 'not_started' && drive.is_approved && (
                         <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
                           <p className="text-blue-800 flex items-center gap-2 mb-4">
-                            <span>ℹ️</span> 
+                            <span>ℹ️</span>
                             <span className="font-semibold">
                               Exam has not started yet. Send emails to students first.
                             </span>
@@ -605,8 +605,8 @@ export default function CompanyDriveDetail() {
                           </div>
                           <div className="bg-white/50 border border-green-300 rounded-lg p-4 mb-4">
                             <p className="text-green-800 text-sm">
-                              <span className="font-semibold">Note:</span> The exam will automatically 
-                              end when the duration is complete. You can also manually end it using 
+                              <span className="font-semibold">Note:</span> The exam will automatically
+                              end when the duration is complete. You can also manually end it using
                               the button below.
                             </p>
                           </div>
@@ -879,10 +879,10 @@ export default function CompanyDriveDetail() {
                   {/* Filter and Export Section */}
                   <div className="bg-white rounded-xl shadow-lg border border-gray-200/50 p-6">
                     <h2 className="text-2xl font-bold text-gray-900 mb-6">📊 Exam Results</h2>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                       {/* Filter Section */}
-                      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200">
+                      <div className="bg-linear-to-r from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200">
                         <h3 className="text-lg font-semibold text-gray-900 mb-4">🔍 Filter Results</h3>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-3">
@@ -912,7 +912,7 @@ export default function CompanyDriveDetail() {
                       </div>
 
                       {/* Export Section */}
-                      <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-6 border border-green-200">
+                      <div className="bg-linear-to-br from-green-50 to-emerald-50 rounded-lg p-6 border border-green-200">
                         <h3 className="text-lg font-semibold text-gray-900 mb-4">📥 Export Results</h3>
                         <p className="text-sm text-gray-600 mb-4">
                           Download results in CSV format for further analysis.
@@ -961,7 +961,7 @@ export default function CompanyDriveDetail() {
                     <div className="bg-white rounded-xl shadow-lg border border-gray-200/50 overflow-hidden">
                       <div className="overflow-x-auto">
                         <table className="w-full">
-                          <thead className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
+                          <thead className="bg-linear-to-r from-indigo-600 to-purple-600 text-white">
                             <tr>
                               <th className="px-6 py-4 text-left font-semibold">Name</th>
                               <th className="px-6 py-4 text-left font-semibold">Email</th>
@@ -976,13 +976,13 @@ export default function CompanyDriveDetail() {
                           </thead>
                           <tbody className="divide-y divide-gray-200">
                             {results.map((result, index) => {
-                              const violationCount = result.violation_details 
+                              const violationCount = result.violation_details
                                 ? Object.values(result.violation_details).reduce((a, b) => a + b, 0)
                                 : 0;
-                              
+
                               return (
-                                <tr 
-                                  key={result.id} 
+                                <tr
+                                  key={result.id}
                                   className={`hover:bg-gray-50 transition ${
                                     index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'
                                   }`}
@@ -1086,7 +1086,7 @@ export default function CompanyDriveDetail() {
                   )}
                 </div>
               )}
-              
+
             </div>
           </main>
         </div>
