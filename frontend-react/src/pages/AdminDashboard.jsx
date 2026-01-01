@@ -3,6 +3,7 @@ import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../lib/api';
 import AdminColleges from './AdminColleges';
+import { formatUTCToIST } from '../utils/timezone';
 
 export default function AdminDashboard() {
   const { logout } = useAuth();
@@ -87,27 +88,27 @@ export default function AdminDashboard() {
       loadExamStatuses();
     }
   }, [driveStatusFilter, activeTab]);
-  
+
   // Polling for active drives in drives tab
   useEffect(() => {
     if (activeTab !== 'drives') {
       return; // Only poll when on drives tab
     }
-    
+
     // Check if there are any active drives before setting up polling
-    const hasActiveDrives = allDrivesList.some(d => 
+    const hasActiveDrives = allDrivesList.some(d =>
       ['live', 'ongoing', 'upcoming', 'approved', 'submitted'].includes(d.status)
     );
-    
+
     if (!hasActiveDrives) {
       return; // Don't set up polling if no active drives
     }
-    
+
     // Refresh exam statuses every 30 seconds for active drives
     const interval = setInterval(() => {
       loadExamStatuses();
     }, 30000);
-    
+
     return () => clearInterval(interval);
   }, [allDrivesList, activeTab]); // Re-evaluate when drives or tab changes
 
@@ -219,16 +220,16 @@ export default function AdminDashboard() {
         `/admin/drives?status_filter=${driveStatusFilter}&limit=500`
       );
       const drivesData = res.data || [];
-      
-      // Only load exam status for active approved drives
-      const activeDrives = drivesData.filter(d => 
-        d.is_approved && !['completed', 'rejected', 'suspended'].includes(d.status)
+
+      // Only load exam status for approved drives (including completed ones)
+      const activeDrives = drivesData.filter(d =>
+        d.is_approved && !['rejected', 'suspended'].includes(d.status)
       );
-      
+
       if (activeDrives.length === 0) {
         return; // Skip if no active drives
       }
-      
+
       const statusPromises = activeDrives.map(async (drive) => {
         try {
           const statusRes = await api.get(`/admin/drives/${drive.id}/exam-status`);
@@ -237,11 +238,11 @@ export default function AdminDashboard() {
             return { driveId: drive.id, status: null };
           }
         });
-      
+
       const statuses = await Promise.all(statusPromises);
       const statusMap = {};
       const timeMap = {};
-      
+
       statuses.forEach(({ driveId, status }) => {
         statusMap[driveId] = status;
         // Initialize client-side countdown with server time
@@ -249,7 +250,7 @@ export default function AdminDashboard() {
           timeMap[driveId] = status.time_remaining;
         }
       });
-      
+
       setExamStatuses(statusMap);
       setClientTimeRemaining(timeMap);
     } catch (error) {
@@ -356,7 +357,7 @@ export default function AdminDashboard() {
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return formatUTCToIST(dateString, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -674,10 +675,10 @@ export default function AdminDashboard() {
                           {drive.company_name || 'N/A'}
                         </td>
                         <td className="px-6 py-4 text-gray-700 dark:text-gray-300">
-                          {drive.question_type}
+                          {drive.category}
                         </td>
                         <td className="px-6 py-4 text-gray-700 dark:text-gray-300">
-                          {drive.duration_minutes} min
+                          {drive.exam_duration_minutes} min
                         </td>
                         <td className="px-6 py-4">
                           {getStatusBadge(drive.status)}
@@ -685,7 +686,7 @@ export default function AdminDashboard() {
                         <td className="px-6 py-4">
                           {drive.is_approved && examStatuses[drive.id] ? (
                             <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold ${
-                              examStatuses[drive.id].exam_state === 'not_started' 
+                              examStatuses[drive.id].exam_state === 'not_started'
                                 ? 'bg-gray-100 text-gray-800'
                                 : examStatuses[drive.id].exam_state === 'ongoing'
                                 ? 'bg-green-100 text-green-800'
@@ -833,10 +834,10 @@ export default function AdminDashboard() {
                             </p>
                           </td>
                           <td className="px-4 py-3 text-gray-700 dark:text-gray-300">
-                            {drive.question_type}
+                            {drive.category}
                           </td>
                           <td className="px-4 py-3 text-gray-700 dark:text-gray-300">
-                            {drive.duration_minutes} min
+                            {drive.exam_duration_minutes} min
                           </td>
                           <td className="px-4 py-3">
                             {getStatusBadge(drive.status)}
@@ -1067,10 +1068,10 @@ export default function AdminDashboard() {
                       📅 Scheduled Window
                     </p>
                     <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                      Start: {driveDetailData.window_start ? new Date(driveDetailData.window_start).toLocaleString() : 'Not set'}
+                      Start: {driveDetailData.window_start ? formatUTCToIST(driveDetailData.window_start) : 'Not set'}
                     </p>
                     <p className="text-xs text-gray-600 dark:text-gray-400">
-                      End: {driveDetailData.window_end ? new Date(driveDetailData.window_end).toLocaleString() : 'Not set'}
+                      End: {driveDetailData.window_end ? formatUTCToIST(driveDetailData.window_end) : 'Not set'}
                     </p>
                   </div>
                   <div>
@@ -1078,10 +1079,10 @@ export default function AdminDashboard() {
                       ✅ Actual Window (Live Times)
                     </p>
                     <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                      Start: {driveDetailData.actual_window_start ? new Date(driveDetailData.actual_window_start).toLocaleString() : '⏳ Not started'}
+                      Start: {driveDetailData.actual_window_start ? formatUTCToIST(driveDetailData.actual_window_start) : '⏳ Not started'}
                     </p>
                     <p className="text-xs text-gray-600 dark:text-gray-400">
-                      End: {driveDetailData.actual_window_end ? new Date(driveDetailData.actual_window_end).toLocaleString() : '⏳ Not ended'}
+                      End: {driveDetailData.actual_window_end ? formatUTCToIST(driveDetailData.actual_window_end) : '⏳ Not ended'}
                     </p>
                   </div>
                 </div>

@@ -36,13 +36,13 @@ def get_drive_status(drive: Drive) -> str:
         return drive.status
     if not drive.is_approved:
         return drive.status
-    
+
     now = datetime.utcnow()
-    
+
     # Check if drive has been manually ended
     if drive.actual_window_end and now >= drive.actual_window_end:
         return "completed"
-    
+
     # Check if drive is manually started and still active
     if drive.actual_window_start:
         # Calculate when window should end based on actual start
@@ -52,7 +52,7 @@ def get_drive_status(drive: Drive) -> str:
             if now >= expected_end:
                 return "completed"
             return "live"
-    
+
     # Check scheduled window times
     if drive.window_start and drive.window_end:
         if now >= drive.window_end:
@@ -61,7 +61,7 @@ def get_drive_status(drive: Drive) -> str:
             return "live"
         if now < drive.window_start:
             return "upcoming"
-    
+
     return drive.status
 
 # Dependency to get current student from token
@@ -94,13 +94,13 @@ def student_login(
             Student.access_token == request.access_token
         )
     ).first()
-    
+
     if not student:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or access token"
         )
-    
+
     # Get drive info
     drive = db.query(Drive).filter(Drive.id == student.drive_id).first()
     if not drive:
@@ -108,10 +108,10 @@ def student_login(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Drive not found"
         )
-    
+
     # Calculate dynamic drive status
     calculated_status = get_drive_status(drive)
-    
+
     return StudentAuthResponse(
         access_token=student.access_token,
         student_id=student.id,
@@ -119,7 +119,8 @@ def student_login(
         email=student.email,
         drive_id=drive.id,
         drive_title=drive.title,
-        drive_status=calculated_status  # Use calculated status instead of drive.status
+        drive_status=calculated_status,  # Use calculated status instead of drive.status
+        exam_submitted_at=student.exam_submitted_at
     )
 
 
@@ -148,7 +149,7 @@ def get_drive_info(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Drive not found"
         )
-    
+
     return {
         "id": drive.id,
         "title": drive.title,
@@ -171,21 +172,21 @@ def start_exam(
     db: Session = Depends(get_db)
 ):
     """Start the exam - generate randomized question order and check window eligibility"""
-    
+
     # Check if already started
     if student.exam_started_at:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Exam already started"
         )
-    
+
     # Check if exam is submitted
     if student.exam_submitted_at:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Exam already submitted"
         )
-    
+
     # Get drive
     drive = db.query(Drive).filter(Drive.id == student.drive_id).first()
     if not drive:
@@ -193,34 +194,34 @@ def start_exam(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Drive not found"
         )
-    
+
     # Check if drive window is currently active
     now = datetime.utcnow()
-    
+
     # Determine active window times (actual overrides scheduled)
     window_start = drive.actual_window_start if drive.actual_window_start else drive.window_start
     window_end = drive.actual_window_end if drive.actual_window_end else drive.window_end
-    
+
     # Check if window times are configured
     if not window_start or not window_end:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Exam window times are not configured. Please contact the administrator."
         )
-    
+
     # Check if current time is within window
     if now < window_start:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Exam window has not opened yet. Opens at {window_start.isoformat()}"
         )
-    
+
     if now >= window_end:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Exam window has closed. No new exams can be started."
         )
-    
+
     # Check if drive is approved and not suspended
     # Note: We don't check for "live" status because that's calculated dynamically
     # Instead we check: is_approved, not suspended, and within window times (checked above)
@@ -229,13 +230,13 @@ def start_exam(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Drive is not approved yet"
         )
-    
+
     if drive.status == "suspended":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Drive has been suspended"
         )
-    
+
     # Get all questions for this drive
     questions = db.query(Question).filter(Question.drive_id == drive.id).all()
     if not questions:
@@ -243,11 +244,11 @@ def start_exam(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No questions found for this drive"
         )
-    
+
     # Randomize question order
     question_ids = [q.id for q in questions]
     random.shuffle(question_ids)
-    
+
     # Update student record with individual exam start time
     student.question_order = question_ids
     student.exam_started_at = now
@@ -259,10 +260,10 @@ def start_exam(
         "copy": 0,
         "paste": 0
     }
-    
+
     db.commit()
     db.refresh(student)
-    
+
     # Calculate individual student's expected end time
     from datetime import timedelta
     if not drive.exam_duration_minutes:
@@ -271,11 +272,11 @@ def start_exam(
             detail="Drive exam duration not configured"
         )
     student_expected_end = student.exam_started_at + timedelta(minutes=drive.exam_duration_minutes)
-    
+
     print(f"DEBUG START_EXAM - exam_started_at: {student.exam_started_at}")
     print(f"DEBUG START_EXAM - duration_minutes: {drive.exam_duration_minutes}")
     print(f"DEBUG START_EXAM - expected_end: {student_expected_end}")
-    
+
     return {
         "success": True,
         "message": "Exam started successfully",
@@ -292,21 +293,21 @@ def get_exam_questions(
     db: Session = Depends(get_db)
 ):
     """Get all exam questions in the student's randomized order"""
-    
+
     # Check if exam started
     if not student.exam_started_at:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Exam not started yet. Call /exam/start first"
         )
-    
+
     # Check if already submitted
     if student.exam_submitted_at:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Exam already submitted"
         )
-    
+
     # Get drive
     drive = db.query(Drive).filter(Drive.id == student.drive_id).first()
     if not drive:
@@ -314,7 +315,7 @@ def get_exam_questions(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Drive not found"
         )
-    
+
     # Get questions in the randomized order
     question_order = student.question_order
     if not question_order:
@@ -322,19 +323,19 @@ def get_exam_questions(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Question order not generated"
         )
-    
+
     # Fetch questions
     questions = db.query(Question).filter(
         Question.id.in_(question_order)
     ).all()
-    
+
     # Sort questions according to student's order
     questions_dict = {q.id: q for q in questions}
     ordered_questions = [questions_dict[qid] for qid in question_order if qid in questions_dict]
-    
+
     # Calculate total marks
     total_marks = sum(q.points for q in ordered_questions)
-    
+
     # Convert to response schema (without correct_answer)
     exam_questions = [
         ExamQuestion(
@@ -348,13 +349,13 @@ def get_exam_questions(
         )
         for q in ordered_questions
     ]
-    
+
     # Calculate expected end time based on individual student's start time
     expected_end = None
     print(f"DEBUG - Checking expected_end calculation")
     print(f"DEBUG - student.exam_started_at: {student.exam_started_at}")
     print(f"DEBUG - drive.exam_duration_minutes: {drive.exam_duration_minutes}")
-    
+
     if student.exam_started_at:
         if not drive.exam_duration_minutes:
             raise HTTPException(
@@ -363,7 +364,7 @@ def get_exam_questions(
             )
         from datetime import timedelta
         expected_end = student.exam_started_at + timedelta(minutes=drive.exam_duration_minutes)
-        
+
         # Debug logging
         print(f"DEBUG - Student exam_started_at: {student.exam_started_at}")
         print(f"DEBUG - Drive exam_duration_minutes: {drive.exam_duration_minutes}")
@@ -372,7 +373,7 @@ def get_exam_questions(
         print(f"DEBUG - Time difference (seconds): {(expected_end - datetime.utcnow()).total_seconds()}")
     else:
         print(f"DEBUG - exam_started_at is None! This means exam hasn't been started via /exam/start endpoint")
-    
+
     response_data = ExamDataResponse(
         drive_id=drive.id,
         drive_title=drive.title,
@@ -388,39 +389,57 @@ def get_exam_questions(
         student_question_order=question_order,
         exam_started_at=student.exam_started_at
     )
-    
-    print(f"DEBUG - Response expected_end: {response_data.expected_end}")
-    print(f"DEBUG - Response duration_minutes: {response_data.duration_minutes}")
-    
-    return response_data
+
+    # Convert to dict and ensure all datetimes are properly serialized as UTC ISO strings
+    response_dict = response_data.model_dump()
+
+    # Helper function to serialize datetime to UTC ISO string
+    def serialize_datetime(dt):
+        if isinstance(dt, datetime):
+            return dt.isoformat() + 'Z'
+        return dt
+
+    # Ensure all datetime fields are properly serialized
+    if response_dict.get('exam_started_at'):
+        response_dict['exam_started_at'] = serialize_datetime(response_dict['exam_started_at'])
+    if response_dict.get('expected_end'):
+        response_dict['expected_end'] = serialize_datetime(response_dict['expected_end'])
+    if response_dict.get('actual_end'):
+        response_dict['actual_end'] = serialize_datetime(response_dict['actual_end'])
+    if response_dict.get('scheduled_start'):
+        response_dict['scheduled_start'] = serialize_datetime(response_dict['scheduled_start'])
+    if response_dict.get('actual_start'):
+        response_dict['actual_start'] = serialize_datetime(response_dict['actual_start'])
+
+    return response_dict
 def record_violation(
     request: ViolationRequest,
     student: Student = Depends(get_current_student),
     db: Session = Depends(get_db)
 ):
     """Record a violation and check if student should be disqualified"""
-    
+
     # Check if exam started
     if not student.exam_started_at:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Exam not started yet"
         )
-    
+
     # Check if already submitted
     if student.exam_submitted_at:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Exam already submitted"
         )
-    
+
     # Validate violation type
     if request.violation_type not in VIOLATION_THRESHOLDS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid violation type"
         )
-    
+
     # Get current violations
     violations = student.violation_details or {
         "tab_switch": 0,
@@ -430,30 +449,30 @@ def record_violation(
         "copy": 0,
         "paste": 0
     }
-    
+
     # Increment violation count
     violations[request.violation_type] += 1
     student.violation_details = violations
-    
+
     # Check if threshold exceeded (if threshold exists)
     threshold = VIOLATION_THRESHOLDS[request.violation_type]
     is_disqualified = False
     disqualification_reason = None
-    
+
     if threshold is not None and violations[request.violation_type] > threshold:
         student.is_disqualified = True
         student.disqualification_reason = f"Exceeded {request.violation_type.replace('_', ' ')} limit ({threshold} allowed)"
         is_disqualified = True
         disqualification_reason = student.disqualification_reason
-        
+
         # Mark exam as submitted with 0 score
         student.exam_submitted_at = datetime.utcnow()
         student.score = 0
         student.total_marks = 0
-    
+
     db.commit()
     db.refresh(student)
-    
+
     return ViolationResponse(
         success=True,
         is_disqualified=is_disqualified,
@@ -469,44 +488,70 @@ def submit_exam(
     db: Session = Depends(get_db)
 ):
     """Submit exam with all answers"""
-    
+
     # Check if exam started
     if not student.exam_started_at:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Exam not started yet"
         )
-    
+
     # Check if already submitted
     if student.exam_submitted_at:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Exam already submitted"
         )
-    
-    # Get all questions for scoring
+
+    # Get drive to calculate total marks from ALL questions
+    drive = db.query(Drive).filter(Drive.id == student.drive_id).first()
+    if not drive:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Drive not found"
+        )
+
+    # Get ALL questions for this drive to calculate correct total_marks
+    all_questions = db.query(Question).filter(Question.drive_id == drive.id).all()
+    total_marks = sum(q.points for q in all_questions)
+
+    # Get questions for scoring (only those that were answered)
     question_ids = [ans.question_id for ans in request.answers]
     questions = db.query(Question).filter(
         Question.id.in_(question_ids)
     ).all()
     questions_dict = {q.id: q for q in questions}
-    
+
     # Calculate score and save responses
     score = 0
-    total_marks = 0
-    
+
     for answer in request.answers:
         question = questions_dict.get(answer.question_id)
         if not question:
             continue
-        
-        total_marks += question.points
+
         is_correct = False
-        
-        if answer.selected_option and answer.selected_option == question.correct_answer:
-            score += question.points
-            is_correct = True
-        
+
+        if answer.selected_option:
+            selected = answer.selected_option.upper()
+            correct = question.correct_answer.upper()
+
+            if selected == correct:
+                score += question.points
+                is_correct = True
+            elif selected == 'A' and correct == question.option_a.upper():
+                score += question.points
+                is_correct = True
+            elif selected == 'B' and correct == question.option_b.upper():
+                score += question.points
+                is_correct = True
+            elif selected == 'C' and correct == question.option_c.upper():
+                score += question.points
+                is_correct = True
+            elif selected == 'D' and correct == question.option_d.upper():
+                score += question.points
+                is_correct = True
+
         # Create student response record
         response = StudentResponse(
             student_id=student.id,
@@ -518,17 +563,17 @@ def submit_exam(
             answered_at=datetime.utcnow()
         )
         db.add(response)
-    
+
     # Update student record
     student.score = score
     student.total_marks = total_marks
     student.exam_submitted_at = datetime.utcnow()
-    
+
     db.commit()
     db.refresh(student)
-    
+
     percentage = (score / total_marks * 100) if total_marks > 0 else 0
-    
+
     return ExamSubmissionResponse(
         success=True,
         score=score,
@@ -544,19 +589,34 @@ def get_exam_result(
     db: Session = Depends(get_db)
 ):
     """Get student's exam result"""
-    
+
     # Check if exam submitted
     if not student.exam_submitted_at:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Exam not submitted yet"
         )
-    
-    percentage = (student.score / student.total_marks * 100) if student.total_marks > 0 else 0
-    
+
+    # Get drive to calculate correct total_marks from ALL questions
+    drive = db.query(Drive).filter(Drive.id == student.drive_id).first()
+    if not drive:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Drive not found"
+        )
+
+    # Recalculate total_marks from ALL questions (fix for old submissions with wrong stored total_marks)
+    all_questions = db.query(Question).filter(Question.drive_id == drive.id).all()
+    correct_total_marks = sum(q.points for q in all_questions)
+
+    # Use the correct total_marks for percentage calculation
+    # Handle case where score is None (exam manually ended without submission)
+    score = student.score if student.score is not None else 0
+    percentage = (score / correct_total_marks * 100) if correct_total_marks > 0 else 0
+
     return {
-        "score": student.score,
-        "total_marks": student.total_marks,
+        "score": score,
+        "total_marks": correct_total_marks,  # Return correct total_marks
         "percentage": round(percentage, 2),
         "submitted_at": student.exam_submitted_at,
         "is_disqualified": student.is_disqualified,

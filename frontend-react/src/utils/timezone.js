@@ -46,6 +46,33 @@ export const formatDateWithTimezone = (date) => {
 };
 
 /**
+ * Convert UTC date to IST (Indian Standard Time) and format
+ * @param {string|Date} utcDate - UTC date to convert
+ * @param {object} options - Formatting options for toLocaleString
+ * @returns {string} Formatted IST date string
+ */
+export const formatUTCToIST = (utcDate, options = {}) => {
+  if (!utcDate) return 'Not set';
+  const date = new Date(utcDate);
+  // Convert to IST by adding 5.5 hours (330 minutes)
+  const istDate = new Date(date.getTime() + (5.5 * 60 * 60 * 1000));
+  return istDate.toLocaleString('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    ...options
+  });
+};
+
+/**
+ * Format date for display in IST with timezone label
+ * @param {string|Date} utcDate - UTC date to convert and format
+ * @returns {string} Formatted IST date string with timezone
+ */
+export const formatDateIST = (utcDate) => {
+  if (!utcDate) return 'Not set';
+  return `${formatUTCToIST(utcDate)} IST`;
+};
+
+/**
  * Convert local datetime-local input to UTC ISO string for backend
  * @param {string} localDateTimeString - Local datetime string from input
  * @returns {string|null} UTC ISO string

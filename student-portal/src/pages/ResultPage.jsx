@@ -1,16 +1,93 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+import { API_ENDPOINTS } from '../utils/api';
 
 const ResultPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout } = useAuth();
-  const { score, total_marks, percentage, submitted_at } = location.state || {};
+  const { logout, student } = useAuth();
+  const [resultData, setResultData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  if (!score && score !== 0) {
+  // Check if data was passed via navigation state (from exam submission)
+  const stateData = location.state || {};
+  const hasStateData = stateData.score !== undefined || stateData.total_marks !== undefined;
+
+  useEffect(() => {
+    const fetchResult = async () => {
+      // If we have data from navigation state, use it
+      if (hasStateData) {
+        setResultData(stateData);
+        setLoading(false);
+        return;
+      }
+
+      // Otherwise, fetch from API
+      try {
+        const token = localStorage.getItem('student_access_token');
+        if (!token) {
+          navigate('/login');
+          return;
+        }
+
+        const response = await axios.get(API_ENDPOINTS.getResult, {
+          params: { token }
+        });
+
+        setResultData(response.data);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching exam result:', error);
+        if (error.response?.status === 400 && error.response?.data?.detail?.includes('not submitted')) {
+          // Exam not submitted yet, redirect to waiting room
+          navigate('/waiting-room');
+          return;
+        }
+        setError('Failed to load exam results. Please try again.');
+        setLoading(false);
+      }
+    };
+
+    fetchResult();
+  }, [hasStateData, stateData, navigate]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <p className="text-gray-700">Loading your results...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-8 text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={() => navigate('/waiting-room')}
+            className="bg-indigo-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-indigo-700"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!resultData) {
     navigate('/login');
     return null;
   }
+
+  const { score, total_marks, percentage, submitted_at } = resultData;
+  const percentageValue = typeof percentage === 'number' && !isNaN(percentage) ? percentage : 0;
 
   const handleLogout = () => {
     logout();
@@ -18,11 +95,11 @@ const ResultPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="max-w-2xl w-full bg-white rounded-lg shadow-xl p-8">
         <div className="text-center mb-8">
           <div className="mb-6">
-            {percentage >= 40 ? (
+            {percentageValue >= 40 ? (
               <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg className="w-12 h-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -48,7 +125,7 @@ const ResultPage = () => {
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 mb-6">
           <div className="text-center mb-6">
             <div className="text-6xl font-bold text-indigo-600 mb-2">
-              {percentage.toFixed(2)}%
+              {percentageValue.toFixed(2)}%
             </div>
             <p className="text-gray-600">Your Score</p>
           </div>
@@ -75,7 +152,7 @@ const ResultPage = () => {
         <div className="text-center">
           <button
             onClick={handleLogout}
-            className="bg-indigo-600 text-white py-3 px-8 rounded-lg font-semibold hover:bg-indigo-700 transition-colors"
+            className="bg-red-600 text-white py-3 px-8 rounded-lg font-semibold hover:bg-red-700 transition-colors"
           >
             Logout
           </button>

@@ -38,12 +38,16 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    // Handle 401 Unauthorized errors
+    // Handle 401 Unauthorized errors, but not for login endpoints
     if (error.response?.status === 401) {
-      // Clear token and redirect to login
-      localStorage.removeItem('cxp_auth');
-      localStorage.removeItem('user');
-      window.location.href = '/';
+      const url = error.config?.url || '';
+      // Don't redirect for login endpoints - let the component handle the error
+      if (!url.includes('/auth/admin/login') && !url.includes('/auth/company/login')) {
+        // Clear token and redirect to login
+        localStorage.removeItem('cxp_auth');
+        localStorage.removeItem('user');
+        window.location.href = '/';
+      }
     }
     return Promise.reject(error);
   }

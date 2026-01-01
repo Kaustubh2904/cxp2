@@ -37,20 +37,23 @@ export const AuthProvider = ({ children }) => {
       });
 
       const studentData = response.data;
-      
+
+      // Clear any previous exam data before storing new student data
+      localStorage.removeItem('exam_answers');
+
       // Store in localStorage
       localStorage.setItem('student_access_token', studentData.access_token);
       localStorage.setItem('student_data', JSON.stringify(studentData));
-      
+
       setStudent(studentData);
       setIsAuthenticated(true);
-      
+
       return { success: true, data: studentData };
     } catch (error) {
       console.error('Login error:', error);
-      return { 
-        success: false, 
-        error: error.response?.data?.detail || 'Invalid email or access token' 
+      return {
+        success: false,
+        error: error.response?.data?.detail || 'Invalid email or access token'
       };
     }
   };
@@ -58,6 +61,7 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     localStorage.removeItem('student_access_token');
     localStorage.removeItem('student_data');
+    // Clear all exam-related data
     localStorage.removeItem('exam_answers');
     setStudent(null);
     setIsAuthenticated(false);
@@ -87,11 +91,11 @@ export const AuthProvider = ({ children }) => {
     try {
       const token = localStorage.getItem('student_access_token');
       const storedStudent = localStorage.getItem('student_data');
-      
+
       if (!token || !storedStudent) return false;
-      
+
       const studentData = JSON.parse(storedStudent);
-      
+
       // Re-login to get fresh data (token remains the same)
       const response = await axios.post(API_ENDPOINTS.login, {
         email: studentData.email,
@@ -99,11 +103,11 @@ export const AuthProvider = ({ children }) => {
       });
 
       const freshData = response.data;
-      
+
       // Update localStorage and state
       localStorage.setItem('student_data', JSON.stringify(freshData));
       setStudent(freshData);
-      
+
       return true;
     } catch (error) {
       console.error('Error refreshing student data:', error);

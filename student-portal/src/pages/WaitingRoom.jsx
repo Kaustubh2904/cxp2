@@ -24,7 +24,7 @@ const WaitingRoom = () => {
 
       // Validate token and check status
       const validation = await validateToken();
-      
+
       if (!validation.valid) {
         if (validation.disqualified) {
           navigate('/disqualified', { state: { reason: validation.reason } });
@@ -43,23 +43,23 @@ const WaitingRoom = () => {
 
       const freshData = response.data;
       setDriveStatus(freshData.drive_status);
-      
+
       // Fetch drive details to get window information
       try {
         const driveResponse = await axios.get(API_ENDPOINTS.driveInfo, {
           params: { token }
         });
         setDriveDetails(driveResponse.data);
-        
+
         // Calculate window time remaining
         // Priority: actual_window_end (set when started or manually ended) > window_end (scheduled)
         const windowEndTime = driveResponse.data.actual_window_end || driveResponse.data.window_end;
-        
+
         if (windowEndTime) {
           const windowEnd = new Date(windowEndTime);
           const now = new Date();
           const diffMs = windowEnd - now;
-          
+
           console.log('Window end calculation:', {
             actual_window_end: driveResponse.data.actual_window_end,
             window_end: driveResponse.data.window_end,
@@ -67,7 +67,7 @@ const WaitingRoom = () => {
             diffMs,
             diffMinutes: Math.floor(diffMs / 60000)
           });
-          
+
           if (diffMs > 0) {
             const hours = Math.floor(diffMs / 3600000);
             const minutes = Math.floor((diffMs % 3600000) / 60000);
@@ -79,12 +79,12 @@ const WaitingRoom = () => {
       } catch (err) {
         console.error('Error fetching drive details:', err);
       }
-      
+
       // Check if exam can be started
       if (freshData.drive_status === 'live' || freshData.drive_status === 'ongoing') {
         setCanStart(true);
       }
-      
+
       setLoading(false);
     } catch (error) {
       console.error('Error checking drive status:', error);
@@ -95,6 +95,12 @@ const WaitingRoom = () => {
   useEffect(() => {
     if (!student) {
       navigate('/login');
+      return;
+    }
+
+    // Check if exam has already been submitted
+    if (student.exam_submitted_at) {
+      navigate('/result');
       return;
     }
 
@@ -119,7 +125,7 @@ const WaitingRoom = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="max-w-2xl w-full bg-white rounded-lg shadow-xl p-8">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">{student?.drive_title}</h1>
@@ -133,11 +139,27 @@ const WaitingRoom = () => {
           </div>
         ) : (
           <div className="space-y-6">
-            {canStart ? (
+            {driveStatus === 'completed' && !student?.exam_started_at ? (
+              <>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+                  <div className="text-6xl mb-4">⏰</div>
+                  <h2 className="text-2xl font-bold text-red-800 mb-2">
+                    Exam Window Has Ended
+                  </h2>
+                  <p className="text-gray-700 mb-4">
+                    The exam window for this drive has closed. Since you did not attend the exam during the scheduled time,
+                    you are not eligible to take the exam.
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    If you believe this is an error, please contact the administrator.
+                  </p>
+                </div>
+              </>
+            ) : canStart ? (
               <>
                 <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
                   <p className="text-lg font-semibold text-green-800 mb-2">
-                    🎯 The exam window is now live!
+                   The exam window is now live!
                   </p>
                   {windowTimeRemaining && windowTimeRemaining !== 'Closed' && (
                     <p className="text-sm text-gray-700 mb-2">
@@ -224,7 +246,7 @@ const WaitingRoom = () => {
               <p><strong>Email:</strong> {student?.email}</p>
               <p><strong>Drive:</strong> {student?.drive_title}</p>
               <p><strong>Status:</strong> <span className={`font-semibold ${
-                driveStatus === 'live' || driveStatus === 'ongoing' ? 'text-green-600' : 
+                driveStatus === 'live' || driveStatus === 'ongoing' ? 'text-green-600' :
                 driveStatus === 'upcoming' ? 'text-yellow-600' : 'text-gray-600'
               }`}>{driveStatus || student?.drive_status || 'Unknown'}</span></p>
             </div>
@@ -233,7 +255,7 @@ const WaitingRoom = () => {
           <div className="text-center">
             <button
               onClick={handleLogout}
-              className="text-red-600 hover:text-red-700 font-medium"
+              className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
             >
               Logout
             </button>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import api from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
+import { formatUTCToIST } from '../utils/timezone';
 
 // Main component for the Company Dashboard
 const CompanyDashboard = () => {
@@ -43,23 +44,23 @@ const CompanyDashboard = () => {
     loadDrives();
     loadExamStatuses();
   }, []); // Only run on mount
-  
+
   // Polling for active drives
   useEffect(() => {
     // Only poll if there are any active drives
-    const hasActiveDrives = drives.some(d => 
+    const hasActiveDrives = drives.some(d =>
       ['live', 'ongoing', 'upcoming', 'approved'].includes(d.status)
     );
-    
+
     if (!hasActiveDrives) {
       return; // Don't set up polling if no active drives
     }
-    
+
     // Refresh exam statuses every 30 seconds for active drives
     const interval = setInterval(() => {
       loadExamStatuses();
     }, 30000);
-    
+
     return () => clearInterval(interval);
   }, [drives]); // Re-evaluate when drives change
 
@@ -159,16 +160,16 @@ const CompanyDashboard = () => {
     try {
       const response = await api.get('/company/drives');
       const drivesData = response.data;
-      
+
       // Load exam status for all approved drives (including completed to show final state)
-      const activeDrives = drivesData.filter(d => 
+      const activeDrives = drivesData.filter(d =>
         d.is_approved && !['rejected', 'suspended'].includes(d.status)
       );
-      
+
       if (activeDrives.length === 0) {
         return; // Skip if no active drives
       }
-      
+
       const statusPromises = activeDrives.map(async (drive) => {
         try {
           const statusRes = await api.get(`/company/drives/${drive.id}/exam-status`);
@@ -177,11 +178,11 @@ const CompanyDashboard = () => {
           return { driveId: drive.id, status: null };
         }
       });
-      
+
       const statuses = await Promise.all(statusPromises);
       const statusMap = {};
       const timeMap = {};
-      
+
       statuses.forEach(({ driveId, status }) => {
         statusMap[driveId] = status;
         // Initialize client-side countdown with server time
@@ -189,7 +190,7 @@ const CompanyDashboard = () => {
           timeMap[driveId] = status.time_remaining;
         }
       });
-      
+
       setExamStatuses(statusMap);
       setClientTimeRemaining(timeMap);
     } catch (error) {
@@ -533,17 +534,17 @@ const CompanyDashboard = () => {
 
                             {/* Window Time Display */}
                             {drive.is_approved && (
-                              <div className="mb-4 p-3 rounded-lg bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200">
+                              <div className="mb-4 p-3 rounded-lg bg-linear-to-r from-indigo-50 to-purple-50 border border-indigo-200">
                                 <p className="text-xs font-semibold text-gray-700 mb-1">Exam Window</p>
                                 <div className="flex items-center justify-between text-xs text-gray-600">
                                   <span>
-                                    {new Date(drive.window_start).toLocaleString('en-US', {
+                                    {formatUTCToIST(drive.window_start, {
                                       month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
                                     })}
                                   </span>
                                   <span>→</span>
                                   <span>
-                                    {new Date(drive.window_end).toLocaleString('en-US', {
+                                    {formatUTCToIST(drive.window_end, {
                                       month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
                                     })}
                                   </span>
@@ -551,10 +552,10 @@ const CompanyDashboard = () => {
                                 {/* Calculate remaining time - ONLY if exam has been manually started */}
                                 {drive.actual_window_start && (() => {
                                   const now = new Date();
-                                  const windowEnd = drive.actual_window_end 
+                                  const windowEnd = drive.actual_window_end
                                     ? new Date(drive.actual_window_end)
                                     : null;
-                                  
+
                                   // Only show countdown if exam has started (actual_window_start exists)
                                   if (windowEnd && windowEnd > now) {
                                     const diffMs = windowEnd - now;
@@ -581,11 +582,11 @@ const CompanyDashboard = () => {
                             {drive.is_approved && examStatuses[drive.id] && (
                               <>
                                 <div className={`mb-4 p-3 rounded-lg border ${
-                                  examStatuses[drive.id].exam_state === 'not_started' 
-                                    ? 'bg-gradient-to-r from-gray-50 to-slate-50 border-gray-300'
+                                  examStatuses[drive.id].exam_state === 'not_started'
+                                    ? 'bg-linear-to-r from-gray-50 to-slate-50 border-gray-300'
                                     : examStatuses[drive.id].exam_state === 'ongoing'
-                                    ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-300'
-                                    : 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-300'
+                                    ? 'bg-linear-to-r from-green-50 to-emerald-50 border-green-300'
+                                    : 'bg-linear-to-r from-blue-50 to-indigo-50 border-blue-300'
                                 }`}>
                                   <div className="flex items-center justify-between">
                                     <div className="flex-1">
@@ -593,7 +594,7 @@ const CompanyDashboard = () => {
                                         Exam Status
                                       </p>
                                       <p className={`text-sm font-bold ${
-                                        examStatuses[drive.id].exam_state === 'not_started' 
+                                        examStatuses[drive.id].exam_state === 'not_started'
                                           ? 'text-gray-900'
                                           : examStatuses[drive.id].exam_state === 'ongoing'
                                           ? 'text-green-900'
@@ -603,10 +604,10 @@ const CompanyDashboard = () => {
                                         {examStatuses[drive.id].exam_state === 'ongoing' && '🟢 Live - Ongoing'}
                                         {(examStatuses[drive.id].exam_state === 'completed' || examStatuses[drive.id].exam_state === 'ended') && '✅ Ended'}
                                       </p>
-                                      {examStatuses[drive.id].scheduled_start && 
+                                      {examStatuses[drive.id].scheduled_start &&
                                        examStatuses[drive.id].exam_state === 'not_started' && (
                                         <p className="text-xs text-gray-600 mt-1">
-                                          📅 {new Date(examStatuses[drive.id].scheduled_start).toLocaleString('en-US', {
+                                          📅 {formatUTCToIST(examStatuses[drive.id].scheduled_start, {
                                             month: 'short',
                                             day: 'numeric',
                                             hour: '2-digit',
@@ -625,9 +626,9 @@ const CompanyDashboard = () => {
                                   )}
                                 </div>
                                 </div>
-                                
+
                                 {/* Warning if no students added yet */}
-                                {!examStatuses[drive.id].has_students && 
+                                {!examStatuses[drive.id].has_students &&
                                  examStatuses[drive.id].exam_state === 'not_started' && (
                                   <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                                     <p className="text-xs text-yellow-800">
@@ -649,27 +650,27 @@ const CompanyDashboard = () => {
                               >
                                 View
                               </button>
-                              
+
                               {/* Start Exam Button - Only show if approved and not started */}
-                              {drive.is_approved && 
-                               examStatuses[drive.id]?.exam_state === 'not_started' && 
+                              {drive.is_approved &&
+                               examStatuses[drive.id]?.exam_state === 'not_started' &&
                                examStatuses[drive.id]?.can_start && (
                                 <button
                                   onClick={() => startExam(drive.id)}
                                   className="flex-1 px-4 py-2 bg-linear-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white text-sm rounded-lg font-semibold transition"
                                 >
-                                  🚀 Start Exam
+                                  Start Exam
                                 </button>
                               )}
 
                               {/* End Exam Button - Only show if ongoing */}
-                              {drive.is_approved && 
+                              {drive.is_approved &&
                                examStatuses[drive.id]?.exam_state === 'ongoing' && (
                                 <button
                                   onClick={() => endExam(drive.id)}
                                   className="flex-1 px-4 py-2 bg-linear-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white text-sm rounded-lg font-semibold transition"
                                 >
-                                  ⏹️ End Exam
+                                  End Exam
                                 </button>
                               )}
 

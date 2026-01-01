@@ -18,7 +18,7 @@ const DisqualifiedPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-linear-to-br from-red-50 to-orange-100 flex items-center justify-center p-4">
       <div className="max-w-2xl w-full bg-white rounded-lg shadow-xl p-8">
         <div className="text-center mb-8">
           <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">

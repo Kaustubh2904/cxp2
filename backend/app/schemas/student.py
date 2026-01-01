@@ -16,6 +16,7 @@ class StudentAuthResponse(BaseModel):
     drive_id: int
     drive_title: str
     drive_status: str
+    exam_submitted_at: Optional[datetime] = None
 
 # Schema for individual question in exam
 class ExamQuestion(BaseModel):

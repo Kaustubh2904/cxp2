@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../lib/api';
+import { formatUTCToIST } from '../utils/timezone';
 
 export default function CompanyDriveDetail() {
   const navigate = useNavigate();
@@ -453,7 +454,7 @@ export default function CompanyDriveDetail() {
                         📅 Scheduled Window Start
                       </p>
                       <p className="text-blue-800 font-medium">
-                        {new Date(drive.window_start).toLocaleString()}
+                        {formatUTCToIST(drive.window_start)}
                       </p>
                       {examStatus && !examStatus.scheduled_has_passed && !drive.actual_window_start && (
                         <p className="text-blue-700 text-sm mt-2">
@@ -494,7 +495,7 @@ export default function CompanyDriveDetail() {
                             {drive.actual_window_start && (
                               <p>
                                 <strong>Window Started at:</strong>{' '}
-                                {new Date(drive.actual_window_start).toLocaleString()}
+                                {formatUTCToIST(drive.actual_window_start)}
                               </p>
                             )}
                             <p>
@@ -533,13 +534,13 @@ export default function CompanyDriveDetail() {
                             {drive.actual_window_start && (
                               <p>
                                 <strong>Started at:</strong>{' '}
-                                {new Date(drive.actual_window_start).toLocaleString()}
+                                {formatUTCToIST(drive.actual_window_start)}
                               </p>
                             )}
                             {drive.actual_window_end && (
                               <p>
                                 <strong>Ended at:</strong>{' '}
-                                {new Date(drive.actual_window_end).toLocaleString()}
+                                {formatUTCToIST(drive.actual_window_end)}
                               </p>
                             )}
                           </div>
@@ -563,83 +564,7 @@ export default function CompanyDriveDetail() {
                     </div>
                   )}
 
-                  {/* Exam Status and Control */}
-                  {examStatus && (
-                    <div className="mt-6">
-                      {examStatus.exam_state === 'not_started' && drive.is_approved && (
-                        <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
-                          <p className="text-blue-800 flex items-center gap-2 mb-4">
-                            <span>ℹ️</span>
-                            <span className="font-semibold">
-                              Exam has not started yet. Send emails to students first.
-                            </span>
-                          </p>
-                          <button
-                            onClick={() => navigate(`/company-send-emails?id=${driveId}`)}
-                            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition"
-                          >
-                            Go to Send Emails
-                          </button>
-                        </div>
-                      )}
 
-                      {examStatus.exam_state === 'ongoing' && (
-                        <div className="bg-green-50 border border-green-200 rounded-xl p-6">
-                          <div className="flex items-start justify-between mb-4">
-                            <div>
-                              <p className="text-green-800 font-bold flex items-center gap-2 text-lg mb-2">
-                                <span>🟢</span> Exam is Currently Ongoing
-                              </p>
-                              <p className="text-green-700 text-sm mb-1">
-                                Started at: {new Date(examStatus.actual_window_start).toLocaleString()}
-                              </p>
-                              <p className="text-green-700 text-sm mb-1">
-                                Duration: {examStatus.exam_duration_minutes} minutes
-                              </p>
-                              {examStatus.time_remaining_minutes !== null && (
-                                <p className="text-green-700 text-sm font-semibold">
-                                  ⏱️ Time Remaining: {Math.round(examStatus.time_remaining_minutes)} minutes
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          <div className="bg-white/50 border border-green-300 rounded-lg p-4 mb-4">
-                            <p className="text-green-800 text-sm">
-                              <span className="font-semibold">Note:</span> The exam will automatically
-                              end when the duration is complete. You can also manually end it using
-                              the button below.
-                            </p>
-                          </div>
-                          <button
-                            onClick={handleEndExam}
-                            disabled={isEndingExam}
-                            className="w-full px-6 py-3 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white rounded-lg font-bold transition flex items-center justify-center gap-2"
-                          >
-                            <span>{isEndingExam ? '⏳' : '🛑'}</span>
-                            {isEndingExam ? 'Ending Exam...' : 'End Exam Manually'}
-                          </button>
-                        </div>
-                      )}
-
-                      {examStatus.exam_state === 'ended' && (
-                        <div className="bg-gray-50 border border-gray-300 rounded-xl p-6">
-                          <p className="text-gray-800 font-bold flex items-center gap-2 text-lg mb-2">
-                            <span>🏁</span> Exam Has Ended
-                          </p>
-                          {examStatus.actual_window_start && (
-                            <p className="text-gray-700 text-sm mb-1">
-                              Started at: {new Date(examStatus.actual_window_start).toLocaleString()}
-                            </p>
-                          )}
-                          {examStatus.actual_window_end && (
-                            <p className="text-gray-700 text-sm">
-                              Ended at: {new Date(examStatus.actual_window_end).toLocaleString()}
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
               </div>
 
@@ -970,7 +895,7 @@ export default function CompanyDriveDetail() {
                               <th className="px-6 py-4 text-left font-semibold">Group</th>
                               <th className="px-6 py-4 text-left font-semibold">Score</th>
                               <th className="px-6 py-4 text-left font-semibold">Percentage</th>
-                              <th className="px-6 py-4 text-left font-semibold">Status</th>
+                              <th className="px-8 py-4 text-left font-semibold">Status</th>
                               <th className="px-6 py-4 text-left font-semibold">Violations</th>
                             </tr>
                           </thead>

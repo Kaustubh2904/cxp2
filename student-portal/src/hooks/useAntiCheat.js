@@ -2,6 +2,9 @@ import { useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { API_ENDPOINTS } from '../utils/api';
 
+// TEMPORARILY DISABLE ANTICHEAT FOR TESTING
+const DISABLE_ANTICHEAT = true;
+
 // Violation thresholds
 const VIOLATION_THRESHOLDS = {
   tab_switch: 3,
@@ -14,7 +17,7 @@ const VIOLATION_THRESHOLDS = {
 
 export const useAntiCheat = (onDisqualified, isExamActive) => {
   console.log('useAntiCheat - isExamActive:', isExamActive); // Debug log
-  
+
   const recordViolation = useCallback(async (violationType) => {
     if (!isExamActive) {
       console.log('Violation not recorded - exam not active');
@@ -22,7 +25,7 @@ export const useAntiCheat = (onDisqualified, isExamActive) => {
     }
 
     console.log('Recording violation:', violationType); // Debug log
-    
+
     try {
       const token = localStorage.getItem('student_access_token');
       const response = await axios.post(
@@ -37,7 +40,7 @@ export const useAntiCheat = (onDisqualified, isExamActive) => {
         // Show warning for violations
         const threshold = VIOLATION_THRESHOLDS[violationType];
         const current = response.data.current_violations[violationType];
-        
+
         if (threshold !== null) {
           const remaining = threshold - current;
           if (remaining === 0) {
@@ -57,6 +60,11 @@ export const useAntiCheat = (onDisqualified, isExamActive) => {
 
   // Tab switch detection
   useEffect(() => {
+    if (DISABLE_ANTICHEAT) {
+      console.log('Anti-cheat DISABLED for testing');
+      return;
+    }
+
     if (!isExamActive) {
       console.log('Tab switch detection NOT active');
       return;
@@ -88,6 +96,7 @@ export const useAntiCheat = (onDisqualified, isExamActive) => {
 
   // Fullscreen exit detection
   useEffect(() => {
+    if (DISABLE_ANTICHEAT) return;
     if (!isExamActive) return;
 
     let fullscreenExitTimeout = null;
@@ -96,7 +105,7 @@ export const useAntiCheat = (onDisqualified, isExamActive) => {
       if (!document.fullscreenElement) {
         console.log('Fullscreen exit detected!');
         recordViolation('fullscreen_exit');
-        
+
         // Give user 3 seconds to return to fullscreen before showing prompt
         fullscreenExitTimeout = setTimeout(() => {
           const reEnter = window.confirm(
@@ -133,6 +142,7 @@ export const useAntiCheat = (onDisqualified, isExamActive) => {
 
   // Right-click prevention
   useEffect(() => {
+    if (DISABLE_ANTICHEAT) return;
     if (!isExamActive) return;
 
     const handleContextMenu = (e) => {
@@ -150,6 +160,7 @@ export const useAntiCheat = (onDisqualified, isExamActive) => {
 
   // Screenshot detection (keyboard shortcuts)
   useEffect(() => {
+    if (DISABLE_ANTICHEAT) return;
     if (!isExamActive) return;
 
     const handleKeyDown = (e) => {
@@ -158,7 +169,7 @@ export const useAntiCheat = (onDisqualified, isExamActive) => {
         recordViolation('screenshot');
         e.preventDefault();
       }
-      
+
       // Windows Snipping Tool (Win + Shift + S)
       if (e.key === 's' && e.shiftKey && (e.metaKey || e.ctrlKey)) {
         recordViolation('screenshot');
@@ -181,6 +192,7 @@ export const useAntiCheat = (onDisqualified, isExamActive) => {
 
   // Copy detection
   useEffect(() => {
+    if (DISABLE_ANTICHEAT) return;
     if (!isExamActive) return;
 
     const handleCopy = (e) => {
@@ -197,6 +209,7 @@ export const useAntiCheat = (onDisqualified, isExamActive) => {
 
   // Paste detection
   useEffect(() => {
+    if (DISABLE_ANTICHEAT) return;
     if (!isExamActive) return;
 
     const handlePaste = (e) => {

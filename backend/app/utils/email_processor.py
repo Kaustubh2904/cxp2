@@ -87,6 +87,6 @@ class EmailTemplateProcessor:
             'company_name': company.company_name,
             'password': EmailTemplateProcessor.generate_password(drive.title),
             'login_url': 'http://localhost:5174',  # Student portal URL
-            'start_time': EmailTemplateProcessor.format_datetime(drive.scheduled_start),
-            'duration': str(drive.duration_minutes)
+            'start_time': EmailTemplateProcessor.format_datetime(drive.window_start),
+            'duration': str(drive.exam_duration_minutes or 60)
         }

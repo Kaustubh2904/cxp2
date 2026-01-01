@@ -31,13 +31,13 @@ def get_drive_status(drive: Drive) -> str:
         return drive.status
     if not drive.is_approved:
         return drive.status
-    
+
     now = datetime.utcnow()
-    
+
     # Check if drive has been manually ended
     if drive.actual_window_end and now >= drive.actual_window_end:
         return "completed"
-    
+
     # Check if drive is manually started and still active
     if drive.actual_window_start:
         # Calculate when window should end based on actual start
@@ -47,7 +47,7 @@ def get_drive_status(drive: Drive) -> str:
             if now >= expected_end:
                 return "completed"
             return "live"
-    
+
     # Check scheduled window times
     if drive.window_start and drive.window_end:
         if now >= drive.window_end:
@@ -56,7 +56,7 @@ def get_drive_status(drive: Drive) -> str:
             return "live"
         if now < drive.window_start:
             return "upcoming"
-    
+
     return drive.status
 
 def get_effective_company_id(
@@ -126,13 +126,13 @@ def format_drive_response(drive: Drive, db: Session):
         "company_name": company_name,
         "title": drive.title,
         "description": drive.description,
-        "category": drive.category,
+        "category": drive.category or "Technical MCQ",  # Default if null
         "targets": targets,
-        "window_start": drive.window_start,
-        "window_end": drive.window_end,
+        "window_start": drive.window_start,  # May be null, but schema allows it
+        "window_end": drive.window_end,      # May be null, but schema allows it
         "actual_window_start": drive.actual_window_start,
         "actual_window_end": drive.actual_window_end,
-        "exam_duration_minutes": drive.exam_duration_minutes,
+        "exam_duration_minutes": drive.exam_duration_minutes or 60,  # Default if null
         "status": drive.status,
         "is_approved": drive.is_approved,
         "admin_notes": drive.admin_notes,
@@ -433,9 +433,10 @@ def duplicate_drive(
         company_id=company.id,
         title=f"{original_drive.title} (Copy)",
         description=original_drive.description,
-        question_type=original_drive.question_type,
-        duration_minutes=original_drive.duration_minutes,
-        scheduled_start=None,  # Reset schedule
+        category=original_drive.category or "Technical MCQ",  # Default category if None
+        window_start=None,  # Reset schedule
+        window_end=None,    # Reset schedule
+        exam_duration_minutes=original_drive.exam_duration_minutes or 60,  # Default 60 minutes if None
         status="draft",
         is_approved=False
     )
@@ -574,7 +575,7 @@ def upload_students_csv(
 ):
     """Upload students from CSV file. Expected columns: name, email, roll_number, phone, college, student_group"""
     import uuid
-    
+
     drive = db.query(Drive).filter(
         Drive.id == drive_id,
         Drive.company_id == company.id
@@ -596,7 +597,7 @@ def upload_students_csv(
         required_columns = ['name', 'email', 'roll_number']
         if not all(col in csv_reader.fieldnames for col in required_columns):
             raise HTTPException(
-                status_code=400, 
+                status_code=400,
                 detail=f"CSV must contain columns: {', '.join(required_columns)}. Optional: phone, college, student_group"
             )
 
@@ -614,7 +615,7 @@ def upload_students_csv(
 
                 # Generate unique access token
                 access_token = str(uuid.uuid4())
-                
+
                 student = Student(
                     drive_id=drive_id,
                     company_id=company.id,
@@ -1164,11 +1165,11 @@ def start_exam(
     # Calculate the window duration from scheduled times
     if not drive.window_start or not drive.window_end:
         raise HTTPException(status_code=400, detail="Drive must have window_start and window_end times set")
-    
+
     # Set actual_window_start to now
     now = datetime.utcnow()
     drive.actual_window_start = now
-    
+
     # Calculate adjusted window end time
     # If starting before scheduled window_start, extend the window by the early start amount
     # If starting after window_start, keep the original window_end
@@ -1179,14 +1180,14 @@ def start_exam(
     else:
         # Started on time or late - keep original end time
         drive.actual_window_end = drive.window_end
-    
+
     db.commit()
     db.refresh(drive)
 
     drive_dict = format_drive_response(drive, db)
     drive_dict["question_count"] = db.query(Question).filter(Question.drive_id == drive.id).count()
     drive_dict["student_count"] = db.query(Student).filter(Student.drive_id == drive.id).count()
-    
+
     return {
         "success": True,
         "message": "Exam window started successfully. Students can now login and begin their exam.",
@@ -1220,26 +1221,26 @@ def end_exam(
     now = datetime.utcnow()
     drive.actual_window_end = now
     drive.status = "completed"
-    
+
     # Auto-submit all students who are currently taking the exam
     students_in_progress = db.query(Student).filter(
         Student.drive_id == drive.id,
         Student.exam_started_at.isnot(None),
         Student.exam_submitted_at.is_(None)
     ).all()
-    
+
     submitted_count = 0
     for student in students_in_progress:
         student.exam_submitted_at = now
         submitted_count += 1
-    
+
     db.commit()
     db.refresh(drive)
 
     drive_dict = format_drive_response(drive, db)
     drive_dict["question_count"] = db.query(Question).filter(Question.drive_id == drive.id).count()
     drive_dict["student_count"] = db.query(Student).filter(Student.drive_id == drive.id).count()
-    
+
     return {
         "success": True,
         "message": f"Exam window ended successfully. {submitted_count} students' exams were auto-submitted.",
@@ -1270,15 +1271,15 @@ def get_exam_status(
     # Calculate time remaining until window closes
     time_remaining_minutes = None
     now = datetime.utcnow()
-    
+
     # Determine which window end time to use
     window_end = drive.actual_window_end if drive.actual_window_end else drive.window_end
-    
+
     if drive.actual_window_start and window_end and not drive.actual_window_end:
         # Exam is ongoing, calculate time until window closes
         time_until_close = window_end - now
         time_remaining_minutes = time_until_close.total_seconds() / 60
-        
+
         # If window has passed, it should be auto-closed
         if time_remaining_minutes <= 0:
             time_remaining_minutes = 0
@@ -1331,33 +1332,33 @@ def get_drive_results(
     company_id: int = Depends(get_effective_company_id)
 ):
     """Get results for all students in a drive with optional percentage filter"""
-    
+
     # Verify drive belongs to company
     drive = db.query(Drive).filter(
         Drive.id == drive_id,
         Drive.company_id == company_id
     ).first()
-    
+
     if not drive:
         raise HTTPException(status_code=404, detail="Drive not found")
-    
+
     # Get all students for this drive
     students = db.query(Student).filter(
         Student.drive_id == drive_id
     ).all()
-    
+
     results = []
     for student in students:
         # Calculate percentage
         percentage = None
         if student.total_marks and student.total_marks > 0:
             percentage = (student.score / student.total_marks) * 100
-        
+
         # Apply filter if specified
         if min_percentage is not None:
             if percentage is None or percentage < min_percentage:
                 continue
-        
+
         results.append({
             "id": student.id,
             "name": student.name,
@@ -1375,7 +1376,7 @@ def get_drive_results(
             "disqualification_reason": student.disqualification_reason,
             "violation_details": student.violation_details
         })
-    
+
     return {
         "drive_id": drive_id,
         "drive_title": drive.title,
@@ -1395,37 +1396,37 @@ def export_drive_results(
     """Export drive results as CSV (summary or detailed format)"""
     from fastapi.responses import StreamingResponse
     from app.models.student_response import StudentResponse as StudentResponseModel
-    
+
     # Verify drive belongs to company
     drive = db.query(Drive).filter(
         Drive.id == drive_id,
         Drive.company_id == company_id
     ).first()
-    
+
     if not drive:
         raise HTTPException(status_code=404, detail="Drive not found")
-    
+
     # Get all students for this drive
     students = db.query(Student).filter(
         Student.drive_id == drive_id
     ).all()
-    
+
     if format == "summary":
         # Summary CSV: Name, Email, Roll Number, College, Student Group, Score, Total, Percentage, Status, Is_Disqualified
         output = io.StringIO()
         writer = csv.writer(output)
-        
+
         # Write header
         writer.writerow([
-            "Name", "Email", "Roll Number", "College", "Student Group", "Score", "Total", 
+            "Name", "Email", "Roll Number", "College", "Student Group", "Score", "Total",
             "Percentage", "Status", "Is_Disqualified"
         ])
-        
+
         # Write data
         for student in students:
             percentage = None
             status = "Not Started"
-            
+
             if student.is_disqualified:
                 status = "Disqualified"
             elif student.exam_submitted_at:
@@ -1434,7 +1435,7 @@ def export_drive_results(
                     percentage = (student.score / student.total_marks) * 100
             elif student.exam_started_at:
                 status = "In Progress"
-            
+
             writer.writerow([
                 student.name,
                 student.email,
@@ -1447,7 +1448,7 @@ def export_drive_results(
                 status,
                 "Yes" if student.is_disqualified else "No"
             ])
-        
+
         output.seek(0)
         return StreamingResponse(
             iter([output.getvalue()]),
@@ -1456,32 +1457,32 @@ def export_drive_results(
                 "Content-Disposition": f"attachment; filename=drive_{drive_id}_results_summary.csv"
             }
         )
-    
+
     elif format == "detailed":
         # Detailed CSV: All summary columns + individual question columns (Q1, Q2, ...)
         output = io.StringIO()
         writer = csv.writer(output)
-        
+
         # Get all questions for this drive to determine number of columns
         questions = db.query(Question).filter(
             Question.drive_id == drive_id
         ).order_by(Question.id).all()
-        
+
         num_questions = len(questions)
         question_headers = [f"Q{i+1}" for i in range(num_questions)]
-        
+
         # Write header
         header = [
-            "Name", "Email", "Roll Number", "College", "Student Group", "Score", "Total", 
+            "Name", "Email", "Roll Number", "College", "Student Group", "Score", "Total",
             "Percentage", "Status", "Is_Disqualified"
         ] + question_headers
         writer.writerow(header)
-        
+
         # Write data for each student
         for student in students:
             percentage = None
             status = "Not Started"
-            
+
             if student.is_disqualified:
                 status = "Disqualified"
             elif student.exam_submitted_at:
@@ -1490,15 +1491,15 @@ def export_drive_results(
                     percentage = (student.score / student.total_marks) * 100
             elif student.exam_started_at:
                 status = "In Progress"
-            
+
             # Get student's responses
             responses = db.query(StudentResponseModel).filter(
                 StudentResponseModel.student_id == student.id
             ).all()
-            
+
             # Create a mapping of question_id to response
             response_map = {r.question_id: r for r in responses}
-            
+
             # Build question answers based on student's question_order
             question_answers = []
             if student.question_order:
@@ -1516,12 +1517,12 @@ def export_drive_results(
             else:
                 # If no question order (exam not started), fill with empty
                 question_answers = [""] * num_questions
-            
+
             # Pad or trim to match number of questions
             while len(question_answers) < num_questions:
                 question_answers.append("")
             question_answers = question_answers[:num_questions]
-            
+
             row = [
                 student.name,
                 student.email,
@@ -1534,9 +1535,9 @@ def export_drive_results(
                 status,
                 "Yes" if student.is_disqualified else "No"
             ] + question_answers
-            
+
             writer.writerow(row)
-        
+
         output.seek(0)
         return StreamingResponse(
             iter([output.getvalue()]),
@@ -1545,10 +1546,9 @@ def export_drive_results(
                 "Content-Disposition": f"attachment; filename=drive_{drive_id}_results_detailed.csv"
             }
         )
-    
+
     else:
         raise HTTPException(
-            status_code=400, 
+            status_code=400,
             detail="Invalid format. Use 'summary' or 'detailed'"
         )
-
