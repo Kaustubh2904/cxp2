@@ -177,21 +177,26 @@ const ExamPage = () => {
         setExamData(response.data);
 
         // Calculate time remaining - ALWAYS calculate from exam_started_at + duration_minutes
-        // actual_end only affects whether new students can start, not existing students' timers
+        // Backend sends UTC datetime strings (already in UTC, DO NOT convert again)
         let remaining;
 
         if (response.data.exam_started_at && response.data.duration_minutes) {
-          // Calculate end time from exam_started_at + duration_minutes
-          // Backend sends UTC datetime as string, parse it correctly
-          let startTimeStr = response.data.exam_started_at;
-          if (typeof startTimeStr === 'string' && !startTimeStr.endsWith('Z')) {
-            startTimeStr += 'Z'; // Add 'Z' only if not already present
-          }
-          const startTime = new Date(startTimeStr);
-          const durationMs = response.data.duration_minutes * 60 * 1000; // Convert minutes to milliseconds
+          // Backend sends ISO datetime string in UTC format
+          // Just parse it directly - JavaScript Date handles ISO strings correctly
+          const startTime = new Date(response.data.exam_started_at);
+          const durationMs = response.data.duration_minutes * 60 * 1000;
           const endTime = new Date(startTime.getTime() + durationMs);
           const now = new Date();
           remaining = Math.floor((endTime - now) / 1000);
+
+          console.log('Exam Timer Calculation:', {
+            exam_started_at: response.data.exam_started_at,
+            startTime: startTime.toISOString(),
+            duration_minutes: response.data.duration_minutes,
+            endTime: endTime.toISOString(),
+            now: now.toISOString(),
+            remaining_seconds: remaining
+          });
 
           // Safety check: if time is negative, exam time has expired
           if (remaining < 0) {
@@ -199,6 +204,7 @@ const ExamPage = () => {
           }
         } else {
           // Critical error: cannot calculate time properly
+          console.error('Missing exam_started_at or duration_minutes');
           remaining = 0;
         }
 

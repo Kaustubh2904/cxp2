@@ -1,28 +1,39 @@
 /**
  * UTC-only timezone utility functions
  * All times displayed in UTC throughout the application
+ * IMPORTANT: Backend sends UTC datetime strings - DO NOT convert to UTC again
  */
 
 /**
  * Format date in UTC with readable format
- * @param {string|Date} date - Date to format
+ * @param {string|Date} date - Date to format (already in UTC from backend)
  * @returns {string} Formatted date string in UTC (e.g., "07 Jan 2026, 14:30 UTC")
  */
 export const formatDateUTC = (date) => {
   if (!date) return 'Not set';
-  const d = new Date(date);
   
-  const options = {
-    year: 'numeric',
-    month: 'short',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'UTC',
-    hour12: false
-  };
+  // Backend sends UTC datetime strings (e.g., "2026-01-07T18:00:00" without timezone)
+  // We need to treat these numbers as UTC, not local time
+  // Solution: Parse the string and reconstruct as UTC
   
-  return `${d.toLocaleString('en-GB', options)} UTC`;
+  let d;
+  if (typeof date === 'string') {
+    // Backend sends naive datetime string - treat as UTC
+    // Convert to ISO string with 'Z' to force UTC interpretation
+    const isoString = date + (date.includes('Z') ? '' : 'Z');
+    d = new Date(isoString);
+  } else {
+    d = date;
+  }
+  
+  // Use UTC methods to get the components (not local time methods)
+  const year = d.getUTCFullYear();
+  const month = d.toLocaleString('en-GB', { month: 'short', timeZone: 'UTC' });
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  const hours = String(d.getUTCHours()).padStart(2, '0');
+  const minutes = String(d.getUTCMinutes()).padStart(2, '0');
+
+  return `${day} ${month} ${year}, ${hours}:${minutes} UTC`;
 };
 
 /**
@@ -41,3 +52,4 @@ export const formatCountdown = (seconds) => {
   }
   return `${minutes}m`;
 };
+

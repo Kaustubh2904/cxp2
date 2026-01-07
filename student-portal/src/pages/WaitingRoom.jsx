@@ -53,10 +53,12 @@ const WaitingRoom = () => {
         setDriveDetails(driveResponse.data);
 
         // Calculate window time remaining
-        // Priority: actual_window_end (set when started or manually ended) > window_end (scheduled)
+        // Priority: actual_window_end (set when manually ended) > window_end (scheduled)
+        // Backend sends UTC datetime strings - parse them directly
         const windowEndTime = driveResponse.data.actual_window_end || driveResponse.data.window_end;
 
         if (windowEndTime) {
+          // Parse UTC datetime directly - no conversion needed
           const windowEnd = new Date(windowEndTime);
           const now = new Date();
           const diffMs = windowEnd - now;
@@ -65,6 +67,8 @@ const WaitingRoom = () => {
             actual_window_end: driveResponse.data.actual_window_end,
             window_end: driveResponse.data.window_end,
             using: windowEndTime,
+            windowEnd_ISO: windowEnd.toISOString(),
+            now_ISO: now.toISOString(),
             diffMs,
             diffMinutes: Math.floor(diffMs / 60000)
           });

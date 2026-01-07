@@ -14,13 +14,13 @@ class Drive(Base):
     description = Column(Text, nullable=True)
     category = Column(String, nullable=False)  # Technical MCQ, Aptitude MCQ, HR MCQ, Coding MCQ
 
-    # Window times (scheduled by company)
-    window_start = Column(DateTime, nullable=True)  # Scheduled start of active window
-    window_end = Column(DateTime, nullable=True)  # Scheduled end of active window
+    # Window times (scheduled by company) - stored as UTC in database
+    window_start = Column(DateTime(timezone=False), nullable=True)  # Scheduled start of active window (UTC)
+    window_end = Column(DateTime(timezone=False), nullable=True)  # Scheduled end of active window (UTC)
 
-    # Actual window times (when manually started/ended)
-    actual_window_start = Column(DateTime, nullable=True)  # When window actually opened
-    actual_window_end = Column(DateTime, nullable=True)  # When window actually closed
+    # Actual window times (when manually started/ended) - stored as UTC in database
+    actual_window_start = Column(DateTime(timezone=False), nullable=True)  # When window actually opened (UTC)
+    actual_window_end = Column(DateTime(timezone=False), nullable=True)  # When window actually closed (UTC)
 
     # Exam duration per student
     exam_duration_minutes = Column(Integer, nullable=False)  # How long each student gets

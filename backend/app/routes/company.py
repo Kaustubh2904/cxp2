@@ -181,6 +181,12 @@ def create_drive(
     # Calculate window duration in minutes
     window_duration = drive_data.window_end - drive_data.window_start
     window_duration_minutes = int(window_duration.total_seconds() / 60)
+    
+    # Convert timezone-aware datetimes to naive UTC if needed
+    # Pydantic may parse ISO strings with 'Z' as timezone-aware UTC datetimes
+    # SQLAlchemy expects naive datetimes (which represent UTC)
+    window_start_naive = drive_data.window_start.replace(tzinfo=None) if drive_data.window_start.tzinfo else drive_data.window_start
+    window_end_naive = drive_data.window_end.replace(tzinfo=None) if drive_data.window_end.tzinfo else drive_data.window_end
 
     # Create the drive with new window fields
     drive = Drive(
@@ -188,8 +194,8 @@ def create_drive(
         title=drive_data.title,
         description=drive_data.description,
         category=drive_data.category,
-        window_start=drive_data.window_start,
-        window_end=drive_data.window_end,
+        window_start=window_start_naive,
+        window_end=window_end_naive,
         exam_duration_minutes=drive_data.exam_duration_minutes,
         duration_minutes=window_duration_minutes,  # Store the calculated window duration
         status="draft"
@@ -286,9 +292,13 @@ def update_drive(
     if drive_data.exam_duration_minutes is not None:
         drive.exam_duration_minutes = drive_data.exam_duration_minutes
     if drive_data.window_start is not None:
-        drive.window_start = drive_data.window_start
+        # Convert timezone-aware datetime to naive UTC if needed
+        window_start_naive = drive_data.window_start.replace(tzinfo=None) if drive_data.window_start.tzinfo else drive_data.window_start
+        drive.window_start = window_start_naive
     if drive_data.window_end is not None:
-        drive.window_end = drive_data.window_end
+        # Convert timezone-aware datetime to naive UTC if needed
+        window_end_naive = drive_data.window_end.replace(tzinfo=None) if drive_data.window_end.tzinfo else drive_data.window_end
+        drive.window_end = window_end_naive
 
     # Recalculate duration_minutes if window times changed
     if drive_data.window_start is not None or drive_data.window_end is not None:

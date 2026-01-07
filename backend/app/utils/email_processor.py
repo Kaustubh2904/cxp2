@@ -68,18 +68,28 @@ class EmailTemplateProcessor:
 
     @staticmethod
     def format_datetime(dt) -> str:
-        """Format datetime for email display in UTC"""
+        """Format datetime for email display in UTC
+        
+        IMPORTANT: SQLAlchemy returns naive datetime objects from DB,
+        but they represent UTC time. We format them directly without conversion.
+        """
         if dt is None:
             return 'TBD'
+        
+        from datetime import datetime
+        
         if isinstance(dt, str):
-            # If string, parse and format in UTC
+            # If string, parse it
             try:
-                from datetime import datetime
                 dt_obj = datetime.fromisoformat(dt.replace('Z', '+00:00'))
-                return dt_obj.strftime('%B %d, %Y at %H:%M UTC')
+                # Remove timezone info to get naive datetime (which represents UTC)
+                dt = dt_obj.replace(tzinfo=None)
             except:
                 return dt
-        # Format datetime object in UTC
+        
+        # At this point, dt is a naive datetime object representing UTC time
+        # Format it directly - strftime on naive datetime just formats the numbers
+        # Since the datetime represents UTC, the formatted string is also UTC
         return dt.strftime('%B %d, %Y at %H:%M UTC')
 
     @staticmethod
