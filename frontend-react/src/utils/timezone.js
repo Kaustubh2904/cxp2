@@ -12,7 +12,7 @@
 export const formatDateUTC = (date) => {
   if (!date) return 'Not set';
   const d = new Date(date);
-  
+
   const options = {
     year: 'numeric',
     month: 'short',
@@ -22,7 +22,7 @@ export const formatDateUTC = (date) => {
     timeZone: 'UTC',
     hour12: false
   };
-  
+
   return `${d.toLocaleString('en-GB', options)} UTC`;
 };
 
@@ -34,14 +34,14 @@ export const formatDateUTC = (date) => {
 export const formatDateOnlyUTC = (date) => {
   if (!date) return 'Not set';
   const d = new Date(date);
-  
+
   const options = {
     year: 'numeric',
     month: 'short',
     day: '2-digit',
     timeZone: 'UTC'
   };
-  
+
   return d.toLocaleString('en-GB', options);
 };
 
@@ -54,14 +54,14 @@ export const formatDateOnlyUTC = (date) => {
 export const convertUTCToInput = (utcDateString) => {
   if (!utcDateString) return '';
   const date = new Date(utcDateString);
-  
+
   // Get UTC components (not local)
   const year = date.getUTCFullYear();
   const month = String(date.getUTCMonth() + 1).padStart(2, '0');
   const day = String(date.getUTCDate()).padStart(2, '0');
   const hours = String(date.getUTCHours()).padStart(2, '0');
   const minutes = String(date.getUTCMinutes()).padStart(2, '0');
-  
+
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
@@ -72,7 +72,7 @@ export const convertUTCToInput = (utcDateString) => {
  */
 export const convertInputToUTC = (inputDateTimeString) => {
   if (!inputDateTimeString) return null;
-  
+
   // Treat input as UTC by appending 'Z'
   const utcDate = new Date(inputDateTimeString + ':00Z');
   return utcDate.toISOString();
@@ -84,4 +84,25 @@ export const convertInputToUTC = (inputDateTimeString) => {
  */
 export const getUTCHelperText = () => {
   return 'All times are in UTC (5:30 hours behind IST). Example: 14:00 UTC = 7:30 PM IST';
+};
+
+/**
+ * Format date in user's local timezone
+ * @param {string|Date} date - Date to format
+ * @returns {string} Formatted date string in local timezone (e.g., "07 Jan 2026, 20:00")
+ */
+export const formatDateLocal = (date) => {
+  if (!date) return 'N/A';
+  const d = new Date(date);
+
+  const options = {
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  };
+
+  return d.toLocaleString('en-GB', options);
 };

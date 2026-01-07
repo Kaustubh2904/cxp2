@@ -3,7 +3,7 @@ import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../lib/api';
 import AdminColleges from './AdminColleges';
-import { formatDateUTC } from '../utils/timezone';
+import { formatDateUTC, formatDateLocal } from '../utils/timezone';
 
 export default function AdminDashboard() {
   const { logout } = useAuth();
@@ -357,7 +357,7 @@ export default function AdminDashboard() {
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
-    return formatDateUTC(dateString);
+    return formatDateLocal(dateString);
   };
 
 
