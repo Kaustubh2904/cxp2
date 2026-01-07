@@ -52,10 +52,10 @@ const DisqualifiedPage = () => {
             Common reasons for disqualification include:
           </p>
           <ul className="list-disc list-inside text-gray-700 mt-2 space-y-1">
-            <li>Switching tabs or applications (more than 3 times)</li>
-            <li>Exiting fullscreen mode (more than 3 times)</li>
-            <li>Right-clicking excessively (more than 6 times)</li>
-            <li>Attempting to take screenshots (more than 2 times)</li>
+            <li>Switching tabs or applications (more than 1 time)</li>
+            <li>Exiting fullscreen mode (more than 1 time)</li>
+            <li>Right-clicking excessively (more than 3 times)</li>
+            <li>Attempting to take screenshots (more than 1 time)</li>
           </ul>
         </div>
 

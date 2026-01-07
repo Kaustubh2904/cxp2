@@ -3,7 +3,7 @@ import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../lib/api';
 import AdminColleges from './AdminColleges';
-import { formatUTCToIST } from '../utils/timezone';
+import { formatUTCDate } from '../utils/timezone';
 
 export default function AdminDashboard() {
   const { logout } = useAuth();
@@ -357,7 +357,7 @@ export default function AdminDashboard() {
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
-    return formatUTCToIST(dateString, {
+    return formatUTCDate(dateString, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -1068,10 +1068,10 @@ export default function AdminDashboard() {
                       📅 Scheduled Window
                     </p>
                     <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                      Start: {driveDetailData.window_start ? formatUTCToIST(driveDetailData.window_start) : 'Not set'}
+                      Start: {driveDetailData.window_start ? formatUTCDate(driveDetailData.window_start) : 'Not set'}
                     </p>
                     <p className="text-xs text-gray-600 dark:text-gray-400">
-                      End: {driveDetailData.window_end ? formatUTCToIST(driveDetailData.window_end) : 'Not set'}
+                      End: {driveDetailData.window_end ? formatUTCDate(driveDetailData.window_end) : 'Not set'}
                     </p>
                   </div>
                   <div>
@@ -1079,10 +1079,10 @@ export default function AdminDashboard() {
                       ✅ Actual Window (Live Times)
                     </p>
                     <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                      Start: {driveDetailData.actual_window_start ? formatUTCToIST(driveDetailData.actual_window_start) : '⏳ Not started'}
+                      Start: {driveDetailData.actual_window_start ? formatUTCDate(driveDetailData.actual_window_start) : '⏳ Not started'}
                     </p>
                     <p className="text-xs text-gray-600 dark:text-gray-400">
-                      End: {driveDetailData.actual_window_end ? formatUTCToIST(driveDetailData.actual_window_end) : '⏳ Not ended'}
+                      End: {driveDetailData.actual_window_end ? formatUTCDate(driveDetailData.actual_window_end) : '⏳ Not ended'}
                     </p>
                   </div>
                 </div>

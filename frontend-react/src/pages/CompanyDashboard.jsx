@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import api from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
-import { formatUTCToIST } from '../utils/timezone';
+import { formatUTCDate } from '../utils/timezone';
 
 // Main component for the Company Dashboard
 const CompanyDashboard = () => {
@@ -538,13 +538,13 @@ const CompanyDashboard = () => {
                                 <p className="text-xs font-semibold text-gray-700 mb-1">Exam Window</p>
                                 <div className="flex items-center justify-between text-xs text-gray-600">
                                   <span>
-                                    {formatUTCToIST(drive.window_start, {
+                                    {formatUTCDate(drive.window_start, {
                                       month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
                                     })}
                                   </span>
                                   <span>→</span>
                                   <span>
-                                    {formatUTCToIST(drive.window_end, {
+                                    {formatUTCDate(drive.window_end, {
                                       month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
                                     })}
                                   </span>
@@ -607,7 +607,7 @@ const CompanyDashboard = () => {
                                       {examStatuses[drive.id].scheduled_start &&
                                        examStatuses[drive.id].exam_state === 'not_started' && (
                                         <p className="text-xs text-gray-600 mt-1">
-                                          📅 {formatUTCToIST(examStatuses[drive.id].scheduled_start, {
+                                          📅 {formatUTCDate(examStatuses[drive.id].scheduled_start, {
                                             month: 'short',
                                             day: 'numeric',
                                             hour: '2-digit',

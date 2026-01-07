@@ -20,10 +20,10 @@ router = APIRouter()
 
 # Violation thresholds
 VIOLATION_THRESHOLDS = {
-    "tab_switch": 3,
-    "fullscreen_exit": 3,
-    "right_click": 6,
-    "screenshot": 2,
+    "tab_switch": 1,
+    "fullscreen_exit": 1,
+    "right_click": 3,
+    "screenshot": 1,
     "copy": None,  # Warning only
     "paste": None  # Warning only
 }
@@ -412,6 +412,8 @@ def get_exam_questions(
         response_dict['actual_start'] = serialize_datetime(response_dict['actual_start'])
 
     return response_dict
+
+@router.post("/exam/violation", response_model=ViolationResponse)
 def record_violation(
     request: ViolationRequest,
     student: Student = Depends(get_current_student),
@@ -450,35 +452,89 @@ def record_violation(
         "paste": 0
     }
 
+    print(f"DEBUG: Before increment - {request.violation_type}: {violations[request.violation_type]}")
+
     # Increment violation count
     violations[request.violation_type] += 1
     student.violation_details = violations
 
-    # Check if threshold exceeded (if threshold exists)
-    threshold = VIOLATION_THRESHOLDS[request.violation_type]
-    is_disqualified = False
-    disqualification_reason = None
+    # Calculate total violations
+    total_violations = sum(violations.values())
+    student.total_violations = total_violations
 
-    if threshold is not None and violations[request.violation_type] > threshold:
-        student.is_disqualified = True
-        student.disqualification_reason = f"Exceeded {request.violation_type.replace('_', ' ')} limit ({threshold} allowed)"
-        is_disqualified = True
-        disqualification_reason = student.disqualification_reason
-
-        # Mark exam as submitted with 0 score
-        student.exam_submitted_at = datetime.utcnow()
-        student.score = 0
-        student.total_marks = 0
+    print(f"DEBUG: After increment - {request.violation_type}: {violations[request.violation_type]}")
+    print(f"DEBUG: Total violations: {total_violations}")
 
     db.commit()
     db.refresh(student)
 
+    print(f"DEBUG: Final response - violations: {violations}, total: {total_violations}")
+
     return ViolationResponse(
         success=True,
-        is_disqualified=is_disqualified,
-        disqualification_reason=disqualification_reason,
-        current_violations=violations
+        is_disqualified=False,  # Always false since disqualification is handled by frontend
+        disqualification_reason=None,
+        current_violations=violations,
+        total_violations=total_violations
     )
+
+
+@router.post("/exam/disqualify")
+def disqualify_student(
+    request: dict,  # {violation_type: str, reason: str}
+    student: Student = Depends(get_current_student),
+    db: Session = Depends(get_db)
+):
+    """Immediately disqualify student for exceeding violation threshold"""
+
+    # Check if exam started
+    if not student.exam_started_at:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Exam not started yet"
+        )
+
+    # Check if already submitted
+    if student.exam_submitted_at:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Exam already submitted"
+        )
+
+    violation_type = request.get("violation_type")
+    reason = request.get("reason")
+
+    if not violation_type or not reason:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="violation_type and reason are required"
+        )
+
+    # Update student record
+    student.is_disqualified = True
+    student.disqualification_reason = reason
+
+    # Mark exam as submitted with 0 score
+    student.exam_submitted_at = datetime.utcnow()
+    student.score = 0
+    student.total_marks = 0
+
+    # Calculate total violations from violation_details
+    violations = student.violation_details or {}
+    total_violations = sum(violations.values())
+    student.total_violations = total_violations
+
+    db.commit()
+    db.refresh(student)
+
+    print(f"DEBUG: Student {student.id} DISQUALIFIED! Reason: {reason}, Total violations: {total_violations}")
+
+    return {
+        "success": True,
+        "message": "Student disqualified successfully",
+        "disqualification_reason": reason,
+        "total_violations": total_violations
+    }
 
 
 @router.post("/exam/submit", response_model=ExamSubmissionResponse)
@@ -614,11 +670,16 @@ def get_exam_result(
     score = student.score if student.score is not None else 0
     percentage = (score / correct_total_marks * 100) if correct_total_marks > 0 else 0
 
+    # Calculate total violations
+    total_violations = student.total_violations or 0
+
     return {
         "score": score,
         "total_marks": correct_total_marks,  # Return correct total_marks
         "percentage": round(percentage, 2),
         "submitted_at": student.exam_submitted_at,
         "is_disqualified": student.is_disqualified,
-        "disqualification_reason": student.disqualification_reason
+        "disqualification_reason": student.disqualification_reason,
+        "total_violations": total_violations,
+        "violation_details": student.violation_details
     }

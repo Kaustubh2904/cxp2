@@ -86,8 +86,9 @@ const ResultPage = () => {
     return null;
   }
 
-  const { score, total_marks, percentage, submitted_at } = resultData;
+  const { score, total_marks, percentage, submitted_at, total_violations, violation_details } = resultData;
   const percentageValue = typeof percentage === 'number' && !isNaN(percentage) ? percentage : 0;
+  const violationsCount = total_violations || 0;
 
   const handleLogout = () => {
     logout();
@@ -130,7 +131,7 @@ const ResultPage = () => {
             <p className="text-gray-600">Your Score</p>
           </div>
 
-          <div className="grid grid-cols-2 gap-6 text-center">
+          <div className="grid grid-cols-3 gap-6 text-center">
             <div>
               <p className="text-3xl font-bold text-gray-900">{score}</p>
               <p className="text-gray-600">Marks Obtained</p>
@@ -138,6 +139,10 @@ const ResultPage = () => {
             <div>
               <p className="text-3xl font-bold text-gray-900">{total_marks}</p>
               <p className="text-gray-600">Total Marks</p>
+            </div>
+            <div>
+              <p className="text-3xl font-bold text-gray-900">{violationsCount}</p>
+              <p className="text-gray-600">Total Violations</p>
             </div>
           </div>
         </div>

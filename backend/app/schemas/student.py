@@ -57,6 +57,7 @@ class ViolationResponse(BaseModel):
     is_disqualified: bool
     disqualification_reason: Optional[str]
     current_violations: Dict[str, int]
+    total_violations: int
 
 # Schema for individual answer submission
 class AnswerSubmission(BaseModel):
@@ -94,6 +95,7 @@ class StudentResponse(BaseModel):
     score: Optional[int] = None
     total_marks: Optional[int] = None
     violation_details: Optional[Dict[str, int]] = None
+    total_violations: int = 0
     is_disqualified: bool = False
     disqualification_reason: Optional[str] = None
     created_at: datetime
@@ -118,6 +120,7 @@ class StudentResultResponse(BaseModel):
     is_disqualified: bool
     disqualification_reason: Optional[str]
     violation_details: Optional[Dict[str, int]]
+    total_violations: int = 0
 
     class Config:
         from_attributes = True

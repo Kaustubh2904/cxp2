@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../lib/api';
-import { convertLocalToUTC, convertUTCToLocal, getTimezoneAbbr } from '../utils/timezone';
+import { convertToUTC, convertUTCToInput } from '../utils/timezone';
 
 export default function CompanyCreateDrive() {
   const navigate = useNavigate();
@@ -69,8 +69,8 @@ export default function CompanyCreateDrive() {
         description: drive.description || '',
         category: drive.category || '',
         exam_duration_minutes: drive.exam_duration_minutes || '',
-        window_start: convertUTCToLocal(drive.window_start),
-        window_end: convertUTCToLocal(drive.window_end),
+        window_start: convertUTCToInput(drive.window_start),
+        window_end: convertUTCToInput(drive.window_end),
       });
 
       if (drive.targets && drive.targets.length > 0) {
@@ -130,8 +130,8 @@ export default function CompanyCreateDrive() {
       const payload = {
         ...formData,
         exam_duration_minutes: parseInt(formData.exam_duration_minutes) || 0,
-        window_start: convertLocalToUTC(formData.window_start),
-        window_end: convertLocalToUTC(formData.window_end),
+        window_start: convertToUTC(formData.window_start),
+        window_end: convertToUTC(formData.window_end),
         targets: targets.map((t) => ({
           college_id: t.college_id ? parseInt(t.college_id) : null,
           custom_college_name: t.custom_college_name || null,
@@ -365,7 +365,7 @@ export default function CompanyCreateDrive() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                           <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Window Start * <span className="text-xs font-normal text-gray-500">({getTimezoneAbbr()})</span>
+                            Window Start *
                           </label>
                           <input
                             type="datetime-local"
@@ -380,7 +380,7 @@ export default function CompanyCreateDrive() {
 
                         <div>
                           <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Window End * <span className="text-xs font-normal text-gray-500">({getTimezoneAbbr()})</span>
+                            Window End *
                           </label>
                           <input
                             type="datetime-local"
@@ -398,7 +398,7 @@ export default function CompanyCreateDrive() {
                       {formData.window_start && formData.window_end && (
                         <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
                           <div className="flex items-start">
-                            <div className="flex-shrink-0">
+                            <div className="shrink-0">
                               <svg className="h-5 w-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                               </svg>
@@ -412,11 +412,11 @@ export default function CompanyCreateDrive() {
                                   const diffMins = Math.floor(diffMs / 60000);
                                   const diffHours = Math.floor(diffMins / 60);
                                   const remainMins = diffMins % 60;
-                                  
+
                                   if (diffMs <= 0) {
                                     return 'Invalid (end must be after start)';
                                   }
-                                  
+
                                   return `${diffHours}h ${remainMins}m (${diffMins} minutes total)`;
                                 })()}
                               </p>
@@ -429,7 +429,7 @@ export default function CompanyCreateDrive() {
                                 const end = new Date(formData.window_end);
                                 const windowMins = Math.floor((end - start) / 60000);
                                 const examMins = parseInt(formData.exam_duration_minutes) || 0;
-                                
+
                                 if (examMins >= windowMins) {
                                   return (
                                     <p className="text-xs text-red-600 font-semibold mt-2">
