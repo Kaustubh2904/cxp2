@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import api from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
-import { formatUTCDate } from '../utils/timezone';
+import { formatDateUTC } from '../utils/timezone';
 
 // Main component for the Company Dashboard
 const CompanyDashboard = () => {
@@ -534,46 +534,49 @@ const CompanyDashboard = () => {
 
                             {/* Window Time Display */}
                             {drive.is_approved && (
-                              <div className="mb-4 p-3 rounded-lg bg-linear-to-r from-indigo-50 to-purple-50 border border-indigo-200">
-                                <p className="text-xs font-semibold text-gray-700 mb-1">Exam Window</p>
-                                <div className="flex items-center justify-between text-xs text-gray-600">
-                                  <span>
-                                    {formatUTCDate(drive.window_start, {
-                                      month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-                                    })}
-                                  </span>
-                                  <span>→</span>
-                                  <span>
-                                    {formatUTCDate(drive.window_end, {
-                                      month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-                                    })}
-                                  </span>
-                                </div>
-                                {/* Calculate remaining time - ONLY if exam has been manually started */}
-                                {drive.actual_window_start && (() => {
-                                  const now = new Date();
-                                  const windowEnd = drive.actual_window_end
-                                    ? new Date(drive.actual_window_end)
-                                    : null;
-
-                                  // Only show countdown if exam has started (actual_window_start exists)
-                                  if (windowEnd && windowEnd > now) {
-                                    const diffMs = windowEnd - now;
-                                    const diffHours = Math.floor(diffMs / 3600000);
-                                    const diffMins = Math.floor((diffMs % 3600000) / 60000);
-                                    return (
-                                      <p className="text-xs font-semibold text-indigo-700 mt-2">
-                                        ⏳ Window closes in: {diffHours}h {diffMins}m
-                                      </p>
-                                    );
-                                  }
-                                  return null;
-                                })()}
-                                {/* Show scheduled window info if not started yet */}
-                                {!drive.actual_window_start && (
-                                  <p className="text-xs text-gray-500 mt-2">
-                                    ℹ️ Click "Start Exam" to activate this window
-                                  </p>
+                              <div className="mb-4 p-3 rounded-lg bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200">
+                                <p className="text-xs font-semibold text-gray-700 mb-1">
+                                  {drive.actual_window_start ? '🟢 Active Window' : '📅 Scheduled Window'}
+                                </p>
+                                {drive.actual_window_start ? (
+                                  // Show ACTUAL times when exam has started
+                                  <div className="flex flex-col text-xs space-y-1">
+                                    <div className="text-green-700 font-semibold">
+                                      Started: {formatDateUTC(drive.actual_window_start)}
+                                    </div>
+                                    <div className="text-green-700 font-semibold">
+                                      Closes: {formatDateUTC(drive.actual_window_end)}
+                                    </div>
+                                    {/* Calculate remaining time */}
+                                    {(() => {
+                                      const now = new Date();
+                                      const windowEnd = new Date(drive.actual_window_end);
+                                      if (windowEnd > now) {
+                                        const diffMs = windowEnd - now;
+                                        const diffHours = Math.floor(diffMs / 3600000);
+                                        const diffMins = Math.floor((diffMs % 3600000) / 60000);
+                                        return (
+                                          <div className="text-indigo-700 font-semibold mt-1">
+                                            ⏳ Closes in: {diffHours}h {diffMins}m
+                                          </div>
+                                        );
+                                      }
+                                      return null;
+                                    })()}
+                                  </div>
+                                ) : (
+                                  // Show scheduled times before exam starts
+                                  <div className="flex flex-col text-xs text-gray-600 space-y-1">
+                                    <div>
+                                      <span className="font-semibold">Start:</span> {formatDateUTC(drive.window_start)}
+                                    </div>
+                                    <div>
+                                      <span className="font-semibold">End:</span> {formatDateUTC(drive.window_end)}
+                                    </div>
+                                    <p className="text-gray-500 mt-2">
+                                      ℹ️ Click "Start Exam" to activate this window
+                                    </p>
+                                  </div>
                                 )}
                               </div>
                             )}
@@ -604,15 +607,10 @@ const CompanyDashboard = () => {
                                         {examStatuses[drive.id].exam_state === 'ongoing' && '🟢 Live - Ongoing'}
                                         {(examStatuses[drive.id].exam_state === 'completed' || examStatuses[drive.id].exam_state === 'ended') && '✅ Ended'}
                                       </p>
-                                      {examStatuses[drive.id].scheduled_start &&
+                                      {examStatuses[drive.id].scheduled_start && 
                                        examStatuses[drive.id].exam_state === 'not_started' && (
                                         <p className="text-xs text-gray-600 mt-1">
-                                          📅 {formatUTCDate(examStatuses[drive.id].scheduled_start, {
-                                            month: 'short',
-                                            day: 'numeric',
-                                            hour: '2-digit',
-                                            minute: '2-digit'
-                                          })}
+                                          📅 {formatDateUTC(examStatuses[drive.id].scheduled_start)}
                                         </p>
                                     )}
                                   </div>

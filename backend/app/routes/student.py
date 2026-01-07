@@ -20,8 +20,8 @@ router = APIRouter()
 
 # Violation thresholds
 VIOLATION_THRESHOLDS = {
-    "tab_switch": 1,
-    "fullscreen_exit": 1,
+    "tab_switch": 3,
+    "fullscreen_exit": 3,
     "right_click": 3,
     "screenshot": 1,
     "copy": None,  # Warning only

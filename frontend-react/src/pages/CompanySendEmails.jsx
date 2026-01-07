@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../lib/api';
+import { formatDateUTC } from '../utils/timezone';
 
 export default function CompanySendEmails() {
   const navigate = useNavigate();
@@ -99,7 +100,9 @@ export default function CompanySendEmails() {
       '{{company_name}}': 'Company',
       '{{password}}': 'temp123456',
       '{{login_url}}': 'http://localhost:5173/student-login',
-      '{{start_time}}': new Date().toLocaleString(),
+      '{{start_time}}': examStatus?.scheduled_start 
+        ? formatDateUTC(examStatus.scheduled_start) 
+        : formatDateUTC(new Date().toISOString()),
       '{{duration}}': '60',
     };
 
@@ -468,7 +471,7 @@ export default function CompanySendEmails() {
                           <p className="text-blue-700 text-sm mb-2">
                             📅 Scheduled Start:{' '}
                             <strong>
-                              {new Date(examStatus.scheduled_start).toLocaleString()}
+                              {formatDateUTC(examStatus.scheduled_start)}
                             </strong>
                           </p>
                         )}

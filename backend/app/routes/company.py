@@ -133,6 +133,7 @@ def format_drive_response(drive: Drive, db: Session):
         "actual_window_start": drive.actual_window_start,
         "actual_window_end": drive.actual_window_end,
         "exam_duration_minutes": drive.exam_duration_minutes or 60,  # Default if null
+        "duration_minutes": drive.duration_minutes,  # Window duration in minutes
         "status": drive.status,
         "is_approved": drive.is_approved,
         "admin_notes": drive.admin_notes,
@@ -177,6 +178,10 @@ def create_drive(
     if not drive_data.targets:
         raise HTTPException(status_code=400, detail="At least one target must be specified")
 
+    # Calculate window duration in minutes
+    window_duration = drive_data.window_end - drive_data.window_start
+    window_duration_minutes = int(window_duration.total_seconds() / 60)
+
     # Create the drive with new window fields
     drive = Drive(
         company_id=company.id,
@@ -186,6 +191,7 @@ def create_drive(
         window_start=drive_data.window_start,
         window_end=drive_data.window_end,
         exam_duration_minutes=drive_data.exam_duration_minutes,
+        duration_minutes=window_duration_minutes,  # Store the calculated window duration
         status="draft"
     )
 
@@ -283,6 +289,13 @@ def update_drive(
         drive.window_start = drive_data.window_start
     if drive_data.window_end is not None:
         drive.window_end = drive_data.window_end
+
+    # Recalculate duration_minutes if window times changed
+    if drive_data.window_start is not None or drive_data.window_end is not None:
+        if drive.window_start and drive.window_end:
+            window_duration = drive.window_end - drive.window_start
+            drive.duration_minutes = int(window_duration.total_seconds() / 60)
+            print(f"DEBUG: Recalculated duration_minutes: {drive.duration_minutes}")
 
     # Update targets if provided
     if drive_data.targets is not None:
@@ -1170,16 +1183,31 @@ def start_exam(
     now = datetime.utcnow()
     drive.actual_window_start = now
 
-    # Calculate adjusted window end time
-    # If starting before scheduled window_start, extend the window by the early start amount
-    # If starting after window_start, keep the original window_end
-    window_duration = drive.window_end - drive.window_start
-    if now < drive.window_start:
-        # Started early - adjust end time to maintain full window duration
-        drive.actual_window_end = now + window_duration
+    # Calculate actual window end time based on exam requirements
+    # duration_minutes = how long the window should stay open
+    # exam_duration_minutes = how long each student gets after they start
+    if drive.duration_minutes:
+        # Use the intended window duration
+        window_duration_minutes = drive.duration_minutes
+        print(f"DEBUG: Using duration_minutes for window: {drive.duration_minutes} minutes")
+    elif drive.exam_duration_minutes:
+        # Fallback: If no window duration set, use exam duration + reasonable buffer
+        # This ensures late-starting students can complete their exam
+        buffer_minutes = max(60, drive.exam_duration_minutes // 3)  # At least 1 hour buffer, or 33% of exam time
+        window_duration_minutes = drive.exam_duration_minutes + buffer_minutes
+        print(f"DEBUG: No duration_minutes set, calculated from exam_duration_minutes: {drive.exam_duration_minutes} + {buffer_minutes} buffer = {window_duration_minutes} minutes")
     else:
-        # Started on time or late - keep original end time
-        drive.actual_window_end = drive.window_end
+        # Fallback to scheduled window duration for backward compatibility
+        scheduled_duration = drive.window_end - drive.window_start
+        window_duration_minutes = int(scheduled_duration.total_seconds() / 60)
+        print(f"DEBUG: Using scheduled window duration fallback: {window_duration_minutes} minutes")
+
+    # Set the actual window end time
+    drive.actual_window_end = now + timedelta(minutes=window_duration_minutes)
+    
+    print(f"DEBUG: actual_window_start: {drive.actual_window_start}")
+    print(f"DEBUG: actual_window_end: {drive.actual_window_end}")
+    print(f"DEBUG: total window duration: {window_duration_minutes} minutes")
 
     db.commit()
     db.refresh(drive)

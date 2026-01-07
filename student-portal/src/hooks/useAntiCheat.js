@@ -32,11 +32,19 @@ export const useAntiCheat = (onDisqualified, isExamActive) => {
   // Track if a violation is currently being processed to avoid race conditions
   const recordingRef = useRef({});
   const fullscreenStateRef = useRef(false);
+  const disqualifiedRef = useRef(false); // Track if already disqualified to prevent duplicate alerts
 
   // Calculate total violations
   const totalViolations = Object.values(localViolations).reduce((sum, count) => sum + count, 0);
 
   const disqualifyStudent = useCallback(async (violationType, reason) => {
+    // Prevent duplicate disqualification calls
+    if (disqualifiedRef.current) {
+      console.log('Already disqualified, skipping duplicate call');
+      return;
+    }
+    disqualifiedRef.current = true;
+
     try {
       const token = localStorage.getItem('student_access_token');
       if (!token) {
@@ -57,20 +65,32 @@ export const useAntiCheat = (onDisqualified, isExamActive) => {
 
       console.log('✅ Disqualification response:', response.data);
 
-      // Show disqualification message
-      toast.error(`🚫 You have been disqualified: ${reason}`);
+      // Show disqualification message ONCE
+      toast.error(`🚫 You have been disqualified: ${reason}`, {
+        autoClose: false, // Keep it visible
+        closeOnClick: false
+      });
 
-      // Call the disqualification callback
-      onDisqualified(reason);
+      // Call the disqualification callback after a short delay to ensure toast is visible
+      setTimeout(() => {
+        onDisqualified(reason);
+      }, 1000);
 
     } catch (error) {
       console.error('Error disqualifying student:', error);
       console.error('Error details:', error.response?.data);
+      disqualifiedRef.current = false; // Reset on error
     }
   }, [onDisqualified]);
 
   const recordViolation = useCallback(
     async (violationType) => {
+      // Don't record violations if already disqualified
+      if (disqualifiedRef.current) {
+        console.log('Already disqualified, skipping violation recording');
+        return;
+      }
+
       if (!isExamActive) {
         console.log('Violation not recorded - exam not active');
         return;

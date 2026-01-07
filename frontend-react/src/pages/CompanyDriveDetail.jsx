@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../lib/api';
-import { formatUTCDate } from '../utils/timezone';
+import { formatDateUTC } from '../utils/timezone';
 
 export default function CompanyDriveDetail() {
   const navigate = useNavigate();
@@ -43,6 +43,18 @@ export default function CompanyDriveDetail() {
 
     return () => clearInterval(intervalId);
   }, [driveId]);
+
+  // Auto-refresh results when on Results tab and exam is ongoing
+  useEffect(() => {
+    if (activeTab === 'results' && examStatus?.exam_state === 'ongoing' && results.length > 0) {
+      const resultsIntervalId = setInterval(() => {
+        console.log('Auto-refreshing results...');
+        loadResults();
+      }, 15000); // Refresh every 15 seconds
+
+      return () => clearInterval(resultsIntervalId);
+    }
+  }, [activeTab, examStatus?.exam_state, results.length]);
 
   const loadDriveData = async () => {
     setIsLoading(true);
@@ -463,7 +475,7 @@ export default function CompanyDriveDetail() {
                             📅 Scheduled Window Start
                           </p>
                           <p className="text-blue-800 font-medium">
-                            {formatUTCDate(drive.window_start)}
+                            {formatDateUTC(drive.window_start)}
                           </p>
                           {examStatus &&
                             !examStatus.scheduled_has_passed &&
@@ -510,7 +522,7 @@ export default function CompanyDriveDetail() {
                                 {drive.actual_window_start && (
                                   <p>
                                     <strong>Window Started at:</strong>{' '}
-                                    {formatUTCDate(drive.actual_window_start)}
+                                    {formatDateUTC(drive.actual_window_start)}
                                   </p>
                                 )}
                                 <p>
@@ -556,13 +568,13 @@ export default function CompanyDriveDetail() {
                                 {drive.actual_window_start && (
                                   <p>
                                     <strong>Started at:</strong>{' '}
-                                    {formatUTCDate(drive.actual_window_start)}
+                                    {formatDateUTC(drive.actual_window_start)}
                                   </p>
                                 )}
                                 {drive.actual_window_end && (
                                   <p>
                                     <strong>Ended at:</strong>{' '}
-                                    {formatUTCDate(drive.actual_window_end)}
+                                    {formatDateUTC(drive.actual_window_end)}
                                   </p>
                                 )}
                               </div>

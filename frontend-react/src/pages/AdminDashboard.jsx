@@ -3,7 +3,7 @@ import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../lib/api';
 import AdminColleges from './AdminColleges';
-import { formatUTCDate } from '../utils/timezone';
+import { formatDateUTC } from '../utils/timezone';
 
 export default function AdminDashboard() {
   const { logout } = useAuth();
@@ -357,13 +357,7 @@ export default function AdminDashboard() {
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
-    return formatUTCDate(dateString, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    return formatDateUTC(dateString);
   };
 
 
@@ -1062,28 +1056,40 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Window and Actual Times */}
-                <div className="grid grid-cols-2 gap-4 mt-4 p-4 bg-blue-50 dark:bg-slate-700 rounded-lg">
+                <div className="grid grid-cols-2 gap-4 mt-4 p-4 bg-blue-50 dark:bg-slate-700 rounded-lg border-2 border-blue-300">
                   <div>
                     <p className="text-sm font-semibold text-blue-900 dark:text-blue-300">
-                      📅 Scheduled Window
+                      📅 Scheduled Window <span className="text-xs font-normal text-blue-600">(UTC)</span>
                     </p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                      Start: {driveDetailData.window_start ? formatUTCDate(driveDetailData.window_start) : 'Not set'}
+                    <p className="text-xs text-gray-700 dark:text-gray-300 mt-1 font-medium">
+                      Start: {driveDetailData.window_start ? formatDateUTC(driveDetailData.window_start) : 'Not set'}
                     </p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400">
-                      End: {driveDetailData.window_end ? formatUTCDate(driveDetailData.window_end) : 'Not set'}
+                    <p className="text-xs text-gray-700 dark:text-gray-300 font-medium">
+                      End: {driveDetailData.window_end ? formatDateUTC(driveDetailData.window_end) : 'Not set'}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-green-900 dark:text-green-300">
-                      ✅ Actual Window (Live Times)
+                      ✅ Actual Window <span className="text-xs font-normal text-green-600">(Live - UTC)</span>
                     </p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                      Start: {driveDetailData.actual_window_start ? formatUTCDate(driveDetailData.actual_window_start) : '⏳ Not started'}
+                    <p className="text-xs text-gray-700 dark:text-gray-300 mt-1 font-medium">
+                      Start: {driveDetailData.actual_window_start ? formatDateUTC(driveDetailData.actual_window_start) : '⏳ Not started'}
                     </p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400">
-                      End: {driveDetailData.actual_window_end ? formatUTCDate(driveDetailData.actual_window_end) : '⏳ Not ended'}
+                    <p className="text-xs text-gray-700 dark:text-gray-300 font-medium">
+                      End: {driveDetailData.actual_window_end ? formatDateUTC(driveDetailData.actual_window_end) : '⏳ Not ended'}
                     </p>
+                    {driveDetailData.actual_window_start && driveDetailData.actual_window_end && (
+                      <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-2 italic">
+                        Duration: {(() => {
+                          const start = new Date(driveDetailData.actual_window_start);
+                          const end = new Date(driveDetailData.actual_window_end);
+                          const diffMs = end - start;
+                          const diffHours = Math.floor(diffMs / 3600000);
+                          const diffMins = Math.floor((diffMs % 3600000) / 60000);
+                          return `${diffHours}h ${diffMins}m`;
+                        })()}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

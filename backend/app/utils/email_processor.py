@@ -68,12 +68,19 @@ class EmailTemplateProcessor:
 
     @staticmethod
     def format_datetime(dt) -> str:
-        """Format datetime for email display"""
+        """Format datetime for email display in UTC"""
         if dt is None:
             return 'TBD'
         if isinstance(dt, str):
-            return dt
-        return dt.strftime('%B %d, %Y at %I:%M %p')
+            # If string, parse and format in UTC
+            try:
+                from datetime import datetime
+                dt_obj = datetime.fromisoformat(dt.replace('Z', '+00:00'))
+                return dt_obj.strftime('%B %d, %Y at %H:%M UTC')
+            except:
+                return dt
+        # Format datetime object in UTC
+        return dt.strftime('%B %d, %Y at %H:%M UTC')
 
     @staticmethod
     def prepare_email_variables(student, drive, company) -> Dict[str, str]:

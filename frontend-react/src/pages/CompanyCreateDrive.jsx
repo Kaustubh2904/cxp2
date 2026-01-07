@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../lib/api';
-import { convertToUTC, convertUTCToInput } from '../utils/timezone';
+import { convertInputToUTC, convertUTCToInput, getUTCHelperText } from '../utils/timezone';
 
 export default function CompanyCreateDrive() {
   const navigate = useNavigate();
@@ -130,8 +130,8 @@ export default function CompanyCreateDrive() {
       const payload = {
         ...formData,
         exam_duration_minutes: parseInt(formData.exam_duration_minutes) || 0,
-        window_start: convertToUTC(formData.window_start),
-        window_end: convertToUTC(formData.window_end),
+        window_start: convertInputToUTC(formData.window_start),
+        window_end: convertInputToUTC(formData.window_end),
         targets: targets.map((t) => ({
           college_id: t.college_id ? parseInt(t.college_id) : null,
           custom_college_name: t.custom_college_name || null,
@@ -365,7 +365,7 @@ export default function CompanyCreateDrive() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                           <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Window Start *
+                            Window Start * <span className="text-xs font-normal text-blue-600">(Enter time in UTC)</span>
                           </label>
                           <input
                             type="datetime-local"
@@ -375,12 +375,12 @@ export default function CompanyCreateDrive() {
                             className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                             required
                           />
-                          <p className="text-xs text-gray-500 mt-1">Your local time</p>
+                          <p className="text-xs text-gray-500 mt-1">{getUTCHelperText()}</p>
                         </div>
 
                         <div>
                           <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Window End *
+                            Window End * <span className="text-xs font-normal text-blue-600">(Enter time in UTC)</span>
                           </label>
                           <input
                             type="datetime-local"
@@ -390,7 +390,7 @@ export default function CompanyCreateDrive() {
                             className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                             required
                           />
-                          <p className="text-xs text-gray-500 mt-1">Your local time</p>
+                          <p className="text-xs text-gray-500 mt-1">{getUTCHelperText()}</p>
                         </div>
                       </div>
 

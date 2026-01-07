@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 import { API_ENDPOINTS } from '../utils/api';
+import { formatDateUTC } from '../utils/timezone';
 
 const WaitingRoom = () => {
   const { student, validateToken, logout } = useAuth();
@@ -190,12 +191,12 @@ const WaitingRoom = () => {
                   </p>
                   {driveDetails?.window_start && (
                     <p className="text-gray-600 mb-2">
-                      Window opens at: <strong>{new Date(driveDetails.window_start).toLocaleString()}</strong>
+                      Window opens at: <strong>{formatDateUTC(driveDetails.window_start)}</strong>
                     </p>
                   )}
                   {driveDetails?.window_end && (
                     <p className="text-gray-600 mb-2">
-                      Window closes at: <strong>{new Date(driveDetails.window_end).toLocaleString()}</strong>
+                      Window closes at: <strong>{formatDateUTC(driveDetails.window_end)}</strong>
                     </p>
                   )}
                   {driveDetails?.exam_duration_minutes && (
