@@ -46,7 +46,11 @@ export default function CompanyDriveDetail() {
 
   // Auto-refresh results when on Results tab and exam is ongoing
   useEffect(() => {
-    if (activeTab === 'results' && examStatus?.exam_state === 'ongoing' && results.length > 0) {
+    if (
+      activeTab === 'results' &&
+      examStatus?.exam_state === 'ongoing' &&
+      results.length > 0
+    ) {
       const resultsIntervalId = setInterval(() => {
         console.log('Auto-refreshing results...');
         loadResults();
@@ -385,7 +389,7 @@ export default function CompanyDriveDetail() {
                         : 'bg-white text-gray-700 hover:bg-gray-50'
                     }`}
                   >
-                    📋 Overview
+                    Overview
                   </button>
                   <button
                     onClick={() => setActiveTab('questions')}
@@ -395,7 +399,7 @@ export default function CompanyDriveDetail() {
                         : 'bg-white text-gray-700 hover:bg-gray-50'
                     }`}
                   >
-                    ❓ Questions ({questions.length})
+                    Questions ({questions.length})
                   </button>
                   <button
                     onClick={() => setActiveTab('students')}
@@ -405,7 +409,7 @@ export default function CompanyDriveDetail() {
                         : 'bg-white text-gray-700 hover:bg-gray-50'
                     }`}
                   >
-                    👥 Students ({students.length})
+                    Students ({students.length})
                   </button>
                   <button
                     onClick={() => {
@@ -418,7 +422,7 @@ export default function CompanyDriveDetail() {
                         : 'bg-white text-gray-700 hover:bg-gray-50'
                     }`}
                   >
-                    📊 Results
+                    Results
                   </button>
                 </div>
               </div>
@@ -430,7 +434,7 @@ export default function CompanyDriveDetail() {
                   <div className="bg-linear-to-br from-white via-blue-50/30 to-indigo-50/30 rounded-2xl shadow-xl border border-gray-200/50">
                     <div className="bg-linear-to-r from-blue-600 via-purple-600 to-indigo-600 px-8 py-6 rounded-t-2xl">
                       <h2 className="text-3xl font-bold text-white flex items-center gap-3">
-                        <span>📋</span> {drive.title}
+                        {drive.title}
                       </h2>
                     </div>
 
@@ -607,7 +611,7 @@ export default function CompanyDriveDetail() {
                 <div className="bg-linear-to-br from-white via-blue-50/30 to-indigo-50/30 rounded-2xl shadow-xl border border-gray-200/50">
                   <div className="bg-linear-to-r from-green-600 via-emerald-600 to-teal-600 px-8 py-6 rounded-t-2xl">
                     <h3 className="text-2xl font-bold text-white flex items-center gap-3">
-                      <span>❓</span> Questions Management
+                      Questions Management
                     </h3>
                   </div>
 
@@ -707,9 +711,9 @@ export default function CompanyDriveDetail() {
               {/* Students Tab */}
               {activeTab === 'students' && (
                 <div className="bg-linear-to-br from-white via-blue-50/30 to-indigo-50/30 rounded-2xl shadow-xl border border-gray-200/50">
-                  <div className="bg-linear-to-r from-purple-600 via-violet-600 to-indigo-600 px-8 py-6">
+                  <div className="bg-linear-to-r from-purple-600 via-violet-600 to-indigo-600 px-8 py-6 rounded-t-2xl">
                     <h3 className="text-2xl font-bold text-white flex items-center gap-3">
-                      <span>👥</span> Students Management
+                       Students Management
                     </h3>
                   </div>
 
@@ -812,7 +816,7 @@ export default function CompanyDriveDetail() {
                   {/* Filter and Export Section */}
                   <div className="bg-white rounded-xl shadow-lg border border-gray-200/50 p-6">
                     <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                      📊 Exam Results
+                      Exam Results
                     </h2>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -946,7 +950,8 @@ export default function CompanyDriveDetail() {
                           </thead>
                           <tbody className="divide-y divide-gray-200">
                             {results.map((result, index) => {
-                              const violationCount = result.violation_count ||
+                              const violationCount =
+                                result.violation_count ||
                                 (result.violation_details
                                   ? Object.values(
                                       result.violation_details
@@ -1007,21 +1012,21 @@ export default function CompanyDriveDetail() {
                                       <span className="text-gray-400">-</span>
                                     )}
                                   </td>
-                                  <td className="px-6 py-4">
+                                  <td className="px-10 py-4">
                                     {result.is_disqualified ? (
-                                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-red-100 text-red-800">
-                                        ❌ Disqualified
+                                      <span className="inline-flex items-center px-6 py-2.5 rounded-full text-sm font-bold bg-red-100 text-red-800">
+                                        ❌Disqualified
                                       </span>
                                     ) : result.exam_submitted_at ? (
-                                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-green-100 text-green-800">
+                                      <span className="inline-flex items-center px-6 py-3 rounded-full text-sm font-bold bg-green-100 text-green-800">
                                         ✅ Submitted
                                       </span>
                                     ) : result.exam_started_at ? (
-                                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-yellow-100 text-yellow-800">
+                                      <span className="inline-flex items-center px-6 py-3 rounded-full text-sm font-bold bg-yellow-100 text-yellow-800">
                                         ⏳ In Progress
                                       </span>
                                     ) : (
-                                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-gray-100 text-gray-800">
+                                      <span className="inline-flex items-center px-6 py-3 rounded-full text-sm font-bold bg-gray-100 text-gray-800">
                                         ⚪ Not Started
                                       </span>
                                     )}
@@ -1032,31 +1037,20 @@ export default function CompanyDriveDetail() {
                                         onClick={() => {
                                           if (result.violation_details) {
                                             alert(
-                                              `Violation Details:\n\n${JSON.stringify(
-                                                result.violation_details,
-                                                null,
-                                                2
-                                              )}\n\nDisqualification Reason: ${
-                                                result.disqualification_reason ||
-                                                'N/A'
-                                              }`
-                                            );
-                                          } else {
-                                            alert(
-                                              `Violation Count: ${violationCount}\n\nDisqualification Reason: ${
+                                              `Violation Details:\n\nDisqualification Reason: ${
                                                 result.disqualification_reason ||
                                                 'N/A'
                                               }`
                                             );
                                           }
                                         }}
-                                        className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-orange-100 text-orange-800 hover:bg-orange-200 transition cursor-pointer"
+                                        className="inline-flex items-center px-6 py-3 rounded-full text-sm font-bold bg-orange-100 text-orange-800 hover:bg-orange-200 transition cursor-pointer"
                                       >
-                                        ⚠️ {violationCount} violations
+                                        ⚠️violations
                                       </button>
                                     ) : (
                                       <span className="text-black text-base font-bold">
-                                        0 violations
+                                        No violations
                                       </span>
                                     )}
                                   </td>
