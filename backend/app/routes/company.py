@@ -181,7 +181,7 @@ def create_drive(
     # Calculate window duration in minutes
     window_duration = drive_data.window_end - drive_data.window_start
     window_duration_minutes = int(window_duration.total_seconds() / 60)
-    
+
     # Convert timezone-aware datetimes to naive UTC if needed
     # Pydantic may parse ISO strings with 'Z' as timezone-aware UTC datetimes
     # SQLAlchemy expects naive datetimes (which represent UTC)
@@ -1214,7 +1214,7 @@ def start_exam(
 
     # Set the actual window end time
     drive.actual_window_end = now + timedelta(minutes=window_duration_minutes)
-    
+
     print(f"DEBUG: actual_window_start: {drive.actual_window_start}")
     print(f"DEBUG: actual_window_end: {drive.actual_window_end}")
     print(f"DEBUG: total window duration: {window_duration_minutes} minutes")
@@ -1412,6 +1412,7 @@ def get_drive_results(
             "exam_submitted_at": student.exam_submitted_at,
             "is_disqualified": student.is_disqualified,
             "disqualification_reason": student.disqualification_reason,
+            "violation_count": student.total_violations or 0,
             "violation_details": student.violation_details
         })
 

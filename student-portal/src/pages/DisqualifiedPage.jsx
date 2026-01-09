@@ -45,17 +45,17 @@ const DisqualifiedPage = () => {
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-3">What happened?</h2>
           <p className="text-gray-700 mb-3">
-            You exceeded the allowed number of violations during the exam. The exam portal has strict
+            You exceeded the violations during the exam. The exam portal has strict
             anti-cheating measures to ensure fair assessment for all candidates.
           </p>
           <p className="text-gray-700">
             Common reasons for disqualification include:
           </p>
           <ul className="list-disc list-inside text-gray-700 mt-2 space-y-1">
-            <li>Switching tabs or applications (more than 1 time)</li>
-            <li>Exiting fullscreen mode (more than 1 time)</li>
-            <li>Right-clicking excessively (more than 3 times)</li>
-            <li>Attempting to take screenshots (more than 1 time)</li>
+            <li>Switching screens or applications.</li>
+            <li>Exiting fullscreen mode.</li>
+            <li>Right-clicking excessively.</li>
+            <li>Attempting to take screenshots.</li>
           </ul>
         </div>
 

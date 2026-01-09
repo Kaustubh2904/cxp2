@@ -73,7 +73,8 @@ export const AuthProvider = ({ children }) => {
       if (!token) return { valid: false };
 
       const response = await axios.get(API_ENDPOINTS.validate, {
-        params: { token }
+        params: { token },
+        headers: { Authorization: `Bearer ${token}` }
       });
 
       if (response.data.is_disqualified) {

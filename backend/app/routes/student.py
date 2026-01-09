@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Header
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
-from typing import List
+from typing import List, Optional
 from datetime import datetime
 import random
 
@@ -510,17 +510,31 @@ def disqualify_student(
             detail="violation_type and reason are required"
         )
 
+    # Get current violations and increment the disqualification violation
+    violations = student.violation_details or {
+        "tab_switch": 0,
+        "fullscreen_exit": 0,
+        "right_click": 0,
+        "screenshot": 0,
+        "copy": 0,
+        "paste": 0
+    }
+
+    # Increment the violation that caused disqualification
+    if violation_type in violations:
+        violations[violation_type] += 1
+
     # Update student record
     student.is_disqualified = True
     student.disqualification_reason = reason
+    student.violation_details = violations
 
     # Mark exam as submitted with 0 score
     student.exam_submitted_at = datetime.utcnow()
     student.score = 0
     student.total_marks = 0
 
-    # Calculate total violations from violation_details
-    violations = student.violation_details or {}
+    # Calculate total violations
     total_violations = sum(violations.values())
     student.total_violations = total_violations
 

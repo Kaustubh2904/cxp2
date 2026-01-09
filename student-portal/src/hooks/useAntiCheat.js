@@ -60,13 +60,13 @@ export const useAntiCheat = (onDisqualified, isExamActive) => {
           violation_type: violationType,
           reason: reason
         },
-        { params: { token } }
+        { params: { token }, headers: { Authorization: `Bearer ${token}` } }
       );
 
       console.log('✅ Disqualification response:', response.data);
 
       // Show disqualification message ONCE
-      toast.error(`🚫 You have been disqualified: ${reason}`, {
+      toast.error(`You have been disqualified: ${reason}`, {
         autoClose: false, // Keep it visible
         closeOnClick: false
       });
@@ -110,7 +110,7 @@ export const useAntiCheat = (onDisqualified, isExamActive) => {
         if (threshold !== null && newCount >= threshold) {
           console.log(`🚨 Threshold exceeded for ${violationType}: ${newCount} >= ${threshold}`);
 
-          const reason = `Exceeded ${violationType.replace('_', ' ')} limit (${threshold} allowed)`;
+          const reason = `Exceeded ${violationType.replace('_', ' ')} limit.`;
           disqualifyStudent(violationType, reason);
         } else {
           // Show warning for violations that haven't exceeded threshold
@@ -159,7 +159,7 @@ export const useAntiCheat = (onDisqualified, isExamActive) => {
         const response = await axios.post(
           API_ENDPOINTS.recordViolation,
           { violation_type: violationType },
-          { params: { token } }
+          { params: { token }, headers: { Authorization: `Bearer ${token}` } }
         );
 
         console.log('✅ Violation recorded in backend:', response.data);

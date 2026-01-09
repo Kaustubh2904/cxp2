@@ -22,9 +22,19 @@ const ExamPage = () => {
 
   const handleDisqualified = useCallback(
     (reason) => {
+      // Store disqualification info with exam window end time
+      const windowEnd = localStorage.getItem('exam_window_end');
+      if (windowEnd && student?.email) {
+        const disqualifiedKey = `disqualified_${student.email}`;
+        localStorage.setItem(disqualifiedKey, JSON.stringify({
+          reason,
+          windowEnd,
+          disqualifiedAt: new Date().toISOString()
+        }));
+      }
       navigate('/disqualified', { state: { reason } });
     },
-    [navigate]
+    [navigate, student?.email]
   );
 
   const { requestFullscreen } = useAntiCheat(handleDisqualified, examStarted);
@@ -67,7 +77,7 @@ const ExamPage = () => {
         const response = await axios.post(
           API_ENDPOINTS.submitExam,
           { answers: answersList },
-          { params: { token } }
+          { params: { token }, headers: { Authorization: `Bearer ${token}` } }
         );
 
         console.log('Submit response:', response.data);
@@ -120,6 +130,30 @@ const ExamPage = () => {
         return;
       }
 
+      // Check if student is locally disqualified and exam window not ended
+      const disqualifiedKey = `disqualified_${student.email}`;
+      const disqualifiedData = localStorage.getItem(disqualifiedKey);
+      if (disqualifiedData) {
+        try {
+          const { reason, windowEnd } = JSON.parse(disqualifiedData);
+          const now = new Date();
+          const windowEndTime = new Date(windowEnd);
+
+          if (now < windowEndTime) {
+            // Still disqualified, redirect to disqualified page
+            navigate('/disqualified', { state: { reason } });
+            return;
+          } else {
+            // Exam window has ended, clear disqualification
+            localStorage.removeItem(disqualifiedKey);
+          }
+        } catch (error) {
+          console.error('Error parsing disqualification data:', error);
+          // Clear corrupted data
+          localStorage.removeItem(disqualifiedKey);
+        }
+      }
+
       let examAlreadyStarted = false;
 
       try {
@@ -127,7 +161,10 @@ const ExamPage = () => {
 
         // Try to start the exam (will fail if already started, which is fine)
         try {
-          await axios.post(API_ENDPOINTS.startExam, {}, { params: { token } });
+          await axios.post(API_ENDPOINTS.startExam, {}, {
+            params: { token },
+            headers: { Authorization: `Bearer ${token}` }
+          });
           console.log('Exam started successfully');
         } catch (startError) {
           // If exam already started, that's okay - we'll just get the questions
@@ -156,6 +193,7 @@ const ExamPage = () => {
         try {
           response = await axios.get(API_ENDPOINTS.getQuestions, {
             params: { token },
+            headers: { Authorization: `Bearer ${token}` }
           });
         } catch (getQuestionsError) {
           if (
@@ -232,8 +270,16 @@ const ExamPage = () => {
         console.error('Error details:', error.response?.data);
         const errorMessage =
           error.response?.data?.detail || error.message || 'Unknown error';
-        alert(`Error loading exam: ${errorMessage}\n\nPlease try again.`);
-        navigate('/waiting-room');
+
+        // Check if the error is about disqualification
+        if (errorMessage.toLowerCase().includes('disqualified') || errorMessage.toLowerCase().includes('disqualify')) {
+          // Extract reason if possible
+          const reason = errorMessage.includes('disqualified') ? errorMessage : 'You have been disqualified from this exam.';
+          navigate('/disqualified', { state: { reason } });
+        } else {
+          alert(`Error loading exam: ${errorMessage}\n\nPlease try again.`);
+          navigate('/waiting-room');
+        }
       }
     };
 

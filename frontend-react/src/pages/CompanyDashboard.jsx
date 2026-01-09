@@ -534,7 +534,7 @@ const CompanyDashboard = () => {
 
                             {/* Window Time Display */}
                             {drive.is_approved && (
-                              <div className="mb-4 p-3 rounded-lg bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200">
+                              <div className="mb-4 p-3 rounded-lg bg-linear-to-r from-indigo-50 to-purple-50 border border-indigo-200">
                                 <p className="text-xs font-semibold text-gray-700 mb-1">
                                   {drive.actual_window_start ? '🟢 Active Window' : '📅 Scheduled Window'}
                                 </p>
@@ -550,7 +550,14 @@ const CompanyDashboard = () => {
                                     {/* Calculate remaining time */}
                                     {(() => {
                                       const now = new Date();
-                                      const windowEnd = new Date(drive.actual_window_end);
+                                      // Parse UTC datetime string as UTC
+                                      let windowEnd;
+                                      if (typeof drive.actual_window_end === 'string') {
+                                        const isoString = drive.actual_window_end + (drive.actual_window_end.includes('Z') ? '' : 'Z');
+                                        windowEnd = new Date(isoString);
+                                      } else {
+                                        windowEnd = new Date(drive.actual_window_end);
+                                      }
                                       if (windowEnd > now) {
                                         const diffMs = windowEnd - now;
                                         const diffHours = Math.floor(diffMs / 3600000);
@@ -607,7 +614,7 @@ const CompanyDashboard = () => {
                                         {examStatuses[drive.id].exam_state === 'ongoing' && '🟢 Live - Ongoing'}
                                         {(examStatuses[drive.id].exam_state === 'completed' || examStatuses[drive.id].exam_state === 'ended') && '✅ Ended'}
                                       </p>
-                                      {examStatuses[drive.id].scheduled_start && 
+                                      {examStatuses[drive.id].scheduled_start &&
                                        examStatuses[drive.id].exam_state === 'not_started' && (
                                         <p className="text-xs text-gray-600 mt-1">
                                           📅 {formatDateUTC(examStatuses[drive.id].scheduled_start)}

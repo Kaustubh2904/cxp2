@@ -48,18 +48,29 @@ const WaitingRoom = () => {
       // Fetch drive details to get window information
       try {
         const driveResponse = await axios.get(API_ENDPOINTS.driveInfo, {
-          params: { token }
+          params: { token },
+          headers: { Authorization: `Bearer ${token}` }
         });
         setDriveDetails(driveResponse.data);
 
         // Calculate window time remaining
         // Priority: actual_window_end (set when manually ended) > window_end (scheduled)
-        // Backend sends UTC datetime strings - parse them directly
+        // Backend sends UTC datetime strings - parse them as UTC
         const windowEndTime = driveResponse.data.actual_window_end || driveResponse.data.window_end;
 
         if (windowEndTime) {
-          // Parse UTC datetime directly - no conversion needed
-          const windowEnd = new Date(windowEndTime);
+          // Parse UTC datetime string as UTC
+          let windowEnd;
+          if (typeof windowEndTime === 'string') {
+            const isoString = windowEndTime + (windowEndTime.includes('Z') ? '' : 'Z');
+            windowEnd = new Date(isoString);
+          } else {
+            windowEnd = new Date(windowEndTime);
+          }
+
+          // Store window end time in localStorage for disqualification logic
+          localStorage.setItem('exam_window_end', windowEnd.toISOString());
+
           const now = new Date();
           const diffMs = windowEnd - now;
 
@@ -107,6 +118,30 @@ const WaitingRoom = () => {
     if (student.exam_submitted_at) {
       navigate('/result');
       return;
+    }
+
+    // Check if student is locally disqualified and exam window not ended
+    const disqualifiedKey = `disqualified_${student.email}`;
+    const disqualifiedData = localStorage.getItem(disqualifiedKey);
+    if (disqualifiedData) {
+      try {
+        const { reason, windowEnd } = JSON.parse(disqualifiedData);
+        const now = new Date();
+        const windowEndTime = new Date(windowEnd);
+
+        if (now < windowEndTime) {
+          // Still disqualified, redirect to disqualified page
+          navigate('/disqualified', { state: { reason } });
+          return;
+        } else {
+          // Exam window has ended, clear disqualification
+          localStorage.removeItem(disqualifiedKey);
+        }
+      } catch (error) {
+        console.error('Error parsing disqualification data:', error);
+        // Clear corrupted data
+        localStorage.removeItem(disqualifiedKey);
+      }
     }
 
     // Initial check

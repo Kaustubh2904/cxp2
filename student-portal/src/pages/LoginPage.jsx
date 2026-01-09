@@ -15,6 +15,31 @@ const LoginPage = () => {
     setError('');
     setLoading(true);
 
+    // Check if student is locally disqualified and exam window not ended
+    const disqualifiedKey = `disqualified_${email}`;
+    const disqualifiedData = localStorage.getItem(disqualifiedKey);
+    if (disqualifiedData) {
+      try {
+        const { reason, windowEnd } = JSON.parse(disqualifiedData);
+        const now = new Date();
+        const windowEndTime = new Date(windowEnd);
+
+        if (now < windowEndTime) {
+          // Still disqualified, redirect to disqualified page
+          navigate('/disqualified', { state: { reason } });
+          setLoading(false);
+          return;
+        } else {
+          // Exam window has ended, clear disqualification
+          localStorage.removeItem(disqualifiedKey);
+        }
+      } catch (error) {
+        console.error('Error parsing disqualification data:', error);
+        // Clear corrupted data
+        localStorage.removeItem(disqualifiedKey);
+      }
+    }
+
     const result = await login(email, accessToken);
 
     if (result.success) {

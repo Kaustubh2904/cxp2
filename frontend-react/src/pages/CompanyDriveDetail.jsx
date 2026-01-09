@@ -946,11 +946,12 @@ export default function CompanyDriveDetail() {
                           </thead>
                           <tbody className="divide-y divide-gray-200">
                             {results.map((result, index) => {
-                              const violationCount = result.violation_details
-                                ? Object.values(
-                                    result.violation_details
-                                  ).reduce((a, b) => a + b, 0)
-                                : 0;
+                              const violationCount = result.violation_count ||
+                                (result.violation_details
+                                  ? Object.values(
+                                      result.violation_details
+                                    ).reduce((a, b) => a + b, 0)
+                                  : 0);
 
                               return (
                                 <tr
@@ -1029,24 +1030,33 @@ export default function CompanyDriveDetail() {
                                     {violationCount > 0 ? (
                                       <button
                                         onClick={() => {
-                                          alert(
-                                            `Violation Details:\n\n${JSON.stringify(
-                                              result.violation_details,
-                                              null,
-                                              2
-                                            )}\n\nDisqualification Reason: ${
-                                              result.disqualification_reason ||
-                                              'N/A'
-                                            }`
-                                          );
+                                          if (result.violation_details) {
+                                            alert(
+                                              `Violation Details:\n\n${JSON.stringify(
+                                                result.violation_details,
+                                                null,
+                                                2
+                                              )}\n\nDisqualification Reason: ${
+                                                result.disqualification_reason ||
+                                                'N/A'
+                                              }`
+                                            );
+                                          } else {
+                                            alert(
+                                              `Violation Count: ${violationCount}\n\nDisqualification Reason: ${
+                                                result.disqualification_reason ||
+                                                'N/A'
+                                              }`
+                                            );
+                                          }
                                         }}
                                         className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-orange-100 text-orange-800 hover:bg-orange-200 transition cursor-pointer"
                                       >
                                         ⚠️ {violationCount} violations
                                       </button>
                                     ) : (
-                                      <span className="text-gray-400 text-sm">
-                                        None
+                                      <span className="text-black text-base font-bold">
+                                        0 violations
                                       </span>
                                     )}
                                   </td>
